@@ -55,6 +55,10 @@ export class SendQueue {
     this.queue = [];
     this.sending = false;
   }
+
+  get depth() {
+    return this.queue.length;
+  }
 }
 
 export const sendQueue = new SendQueue();

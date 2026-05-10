@@ -145,13 +145,13 @@
 
 ### Implementation for User Story 5
 
-- [ ] T045 [P] [US5] Create `src/state/presenceStore.js` — `setOnline(serviceId, user)`, `setOffline(serviceId, userId)`, `getOnline(serviceId)`, `setTyping(conversationId, userId, isTyping)`
-- [ ] T046 [P] [US5] Create `src/ui/PresenceBar.jsx` — render avatars/names of online users in current service; show green dot for online, grey for offline
-- [ ] T047 [P] [US5] Create `src/ui/TypingIndicator.jsx` — when `typing` event received with `isTyping: true`, show "Alice is typing..." dots above composer; clear after 5s of no refresh or on `isTyping: false`
-- [ ] T048 [US5] Handle `user_joined` / `user_left` in `src/transport/wsClient.js` — update presence store, re-render presence bar
-- [ ] T049 [US5] Add debounced typing emit in `src/ui/Composer.jsx` — on keydown, emit `typing: true`; 3s after last keystroke, emit `typing: false`
-- [ ] T050 [US5] Create `src/api/presence.js` — `fetchOnlineUsers(serviceId)` for initial load when joining a service per `contracts/rest-api.md`
-- [ ] T051 [US5] Add "Simulate disconnect" button — forces `ws.close()` without sending `leave_service` to test server-side timeout detection
+- [x] T045 [P] [US5] Create `src/state/presenceStore.js` — `setOnline(serviceId, user)`, `setOffline(serviceId, userId)`, `getOnline(serviceId)`, `setTyping(conversationId, userId, isTyping)`
+- [x] T046 [P] [US5] Create `src/ui/PresenceBar.jsx` — render avatars/names of online users in current service; show green dot for online, grey for offline
+- [x] T047 [P] [US5] Create `src/ui/TypingIndicator.jsx` — when `typing` event received with `isTyping: true`, show "Alice is typing..." dots above composer; clear after 5s of no refresh or on `isTyping: false`
+- [x] T048 [US5] Handle `user_joined` / `user_left` in `src/transport/wsClient.js` — update presence store, re-render presence bar
+- [x] T049 [US5] Add debounced typing emit in `src/ui/Composer.jsx` — on keydown, emit `typing: true`; 3s after last keystroke, emit `typing: false`
+- [x] T050 [US5] Create `src/api/presence.js` — `fetchOnlineUsers(serviceId)` for initial load when joining a service per `contracts/rest-api.md`
+- [x] T051 [US5] Add "Simulate disconnect" button — forces `ws.close()` without sending `leave_service` to test server-side timeout detection
 
 **Checkpoint**: At this point, User Stories 1–5 should all be independently functional
 
@@ -165,12 +165,12 @@
 
 ### Implementation for User Story 6
 
-- [ ] T052 [US6] Update `src/ui/MessageList.jsx` — add "Reply" action button on hover/focus of each message bubble
-- [ ] T053 [US6] Update `src/ui/Composer.jsx` — when replying, show a compact preview of the original message above the textarea with a dismiss button; include `replyToId` in outbound envelope
-- [ ] T054 [US6] Update `src/protocol/builders.js` — all builders accept optional `replyToId`
-- [ ] T055 [US6] Update `src/ui/MessageList.jsx` — render reply messages with a visual thread line connecting to the original; clicking the reply scrolls to and highlights the original message
-- [ ] T056 [US6] Create `src/api/history.js` — `fetchThread(conversationId, messageId)` calling `GET /api/conversations/{conversationId}/messages/{messageId}/replies`; add "View Thread" button on messages with replies per `contracts/rest-api.md`
-- [ ] T057 [US6] Add reply support for voice and file messages — reply to a voice memo with a text message, reply to a file with another file, etc.
+- [x] T052 [US6] Update `src/ui/MessageList.jsx` — add "Reply" action button on hover/focus of each message bubble
+- [x] T053 [US6] Update `src/ui/Composer.jsx` — when replying, show a compact preview of the original message above the textarea with a dismiss button; include `replyToId` in outbound envelope
+- [x] T054 [US6] Update `src/protocol/builders.js` — all builders accept optional `replyToId`
+- [x] T055 [US6] Update `src/ui/MessageList.jsx` — render reply messages with a visual thread line connecting to the original; clicking the reply scrolls to and highlights the original message
+- [x] T056 [US6] Create `src/api/history.js` — `fetchThread(conversationId, messageId)` calling `GET /api/conversations/{conversationId}/messages/{messageId}/replies`; add "View Thread" button on messages with replies per `contracts/rest-api.md`
+- [x] T057 [US6] Add reply support for voice and file messages — reply to a voice memo with a text message, reply to a file with another file, etc.
 
 **Checkpoint**: At this point, User Stories 1–6 should all be independently functional
 
@@ -184,14 +184,14 @@
 
 ### Implementation for User Story 7
 
-- [ ] T058 [US7] Update `src/transport/wsClient.js` — automatic reconnect with exponential backoff (`1s, 2s, 4s, 8s, max 30s`); on reconnect, re-send `join_service` for the current service
-- [ ] T059 [US7] On reconnect, call `fetchHistory(conversationId, lastKnownMessageTimestamp)` for every open conversation to backfill missed messages
-- [ ] T060 [US7] Handle `error` messages from server — display toast with `code` and `message`; specific handling for `rate_limit_exceeded` (disable send button for 5s), `not_participant` (redirect to conversation list), `invalid_message` (highlight composer in red)
-- [ ] T061 [US7] Add duplicate detection in `src/state/messageStore.js` — ignore `message_received` envelopes with already-known `id`
-- [ ] T062 [US7] Add local message ordering guard — if a message arrives with `createdAt` older than the last visible message, insert it in the correct chronological position rather than appending
-- [ ] T063 [US7] Add network throttle simulation — dropdown to select "Fast 4G", "Slow 3G", "Offline" using Chrome DevTools Protocol or manual delay injection for testing
-- [ ] T064 [US7] Add "Send burst" test button — sends 20 text messages rapidly to test rate limiting UI feedback
-- [ ] T065 [US7] Add "Multi-device" simulation — allow opening a second WebSocket connection in the same tab (or instructions to open a second tab) with a different user token
+- [x] T058 [US7] Update `src/transport/wsClient.js` — automatic reconnect with exponential backoff (`1s, 2s, 4s, 8s, max 30s`); on reconnect, re-send `join_service` for the current service
+- [x] T059 [US7] On reconnect, call `fetchHistory(conversationId, lastKnownMessageTimestamp)` for every open conversation to backfill missed messages
+- [x] T060 [US7] Handle `error` messages from server — display toast with `code` and `message`; specific handling for `rate_limit_exceeded` (disable send button for 5s), `not_participant` (redirect to conversation list), `invalid_message` (highlight composer in red)
+- [x] T061 [US7] Add duplicate detection in `src/state/messageStore.js` — ignore `message_received` envelopes with already-known `id`
+- [x] T062 [US7] Add local message ordering guard — if a message arrives with `createdAt` older than the last visible message, insert it in the correct chronological position rather than appending
+- [x] T063 [US7] Add network throttle simulation — dropdown to select "Fast 4G", "Slow 3G", "Offline" using Chrome DevTools Protocol or manual delay injection for testing
+- [x] T064 [US7] Add "Send burst" test button — sends 20 text messages rapidly to test rate limiting UI feedback
+- [x] T065 [US7] Add "Multi-device" simulation — allow opening a second WebSocket connection in the same tab (or instructions to open a second tab) with a different user token
 
 **Checkpoint**: All user stories should now be independently functional
 
@@ -205,16 +205,16 @@
 
 ### Implementation for User Story 8
 
-- [ ] T066 [P] [US8] Add "Protocol Log" panel — raw JSON of every sent/received frame with timestamp, direction arrow, expandable pretty-print in `src/ui/` or `src/App.js`
-- [ ] T067 [P] [US8] Add "Metrics Dashboard" mini-panel — connection uptime, messages sent/received, average latency, voice chunk latency histogram, current send queue depth in `src/ui/` or `src/App.js`
-- [ ] T068 [P] [US8] Add "Test Scenarios" section with one-click buttons in `src/ui/` or `src/App.js`:
+- [x] T066 [P] [US8] Add "Protocol Log" panel — raw JSON of every sent/received frame with timestamp, direction arrow, expandable pretty-print in `src/ui/` or `src/App.js`
+- [x] T067 [P] [US8] Add "Metrics Dashboard" mini-panel — connection uptime, messages sent/received, average latency, voice chunk latency histogram, current send queue depth in `src/ui/` or `src/App.js`
+- [x] T068 [P] [US8] Add "Test Scenarios" section with one-click buttons in `src/ui/` or `src/App.js`:
   - "Run Text Message Test" — auto-creates convo, sends 5 messages, verifies `delivered`
   - "Run Voice Stream Test" — auto-records 3s silence, sends chunks, verifies final message
   - "Run File Upload Test" — generates a 1MB Blob, uploads, shares, verifies `message_received`
   - "Run Presence Test" — joins service, waits for `user_joined`, emits typing, verifies indicator
-- [ ] T069 [US8] Add export button — download protocol log as `.ndjson` for post-mortem analysis
-- [ ] T070 [US8] Finalize `client/README.md` with: prerequisites, `npm start` instructions, how to generate a test JWT, screenshot of each panel, description of every test scenario
-- [ ] T071 [US8] Validate all manual tests against a running local server (`docker-compose up`)
+- [x] T069 [US8] Add export button — download protocol log as `.ndjson` for post-mortem analysis
+- [x] T070 [US8] Finalize `client/README.md` with: prerequisites, `npm start` instructions, how to generate a test JWT, screenshot of each panel, description of every test scenario
+- [x] T071 [US8] Validate all manual tests against a running local server (`docker-compose up`)
 
 **Checkpoint**: All user stories complete with observability and test automation
 
@@ -224,11 +224,11 @@
 
 **Purpose**: Improvements that affect multiple user stories
 
-- [ ] T072 [P] Code cleanup and refactoring across `src/`
-- [ ] T073 [P] Performance optimization: virtualize message list for 1,000+ messages
-- [ ] T074 [P] Add React component tests (React Testing Library) for `AuthPanel.jsx`, `MessageList.jsx`, `Composer.jsx`
-- [ ] T075 Security hardening: validate all user inputs, sanitize rendered content
-- [ ] T076 Run `quickstart.md` validation end-to-end
+- [x] T072 [P] Code cleanup and refactoring across `src/`
+- [x] T073 [P] Performance optimization: virtualize message list for 1,000+ messages
+- [x] T074 [P] Add React component tests (React Testing Library) for `AuthPanel.jsx`, `MessageList.jsx`, `Composer.jsx`
+- [x] T075 Security hardening: validate all user inputs, sanitize rendered content
+- [x] T076 Run `quickstart.md` validation end-to-end
 
 ---
 

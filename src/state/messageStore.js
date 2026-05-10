@@ -23,8 +23,13 @@ class MessageStore {
   add(envelope) {
     const existing = this.messages.get(envelope.id);
     if (existing) {
-      // Merge updates (e.g. deliveredAt)
-      this.messages.set(envelope.id, { ...existing, ...envelope });
+      // Duplicate detection: merge server-side updates (e.g. deliveredAt, replyToId)
+      // but preserve existing createdAt to maintain ordering
+      this.messages.set(envelope.id, {
+        ...existing,
+        ...envelope,
+        createdAt: existing.createdAt || envelope.createdAt,
+      });
     } else {
       this.messages.set(envelope.id, envelope);
     }

@@ -2,7 +2,7 @@ import { WS_URL, RECONNECT_DELAY_MS, MAX_RECONNECT_DELAY_MS } from '../config';
 import { sendQueue } from './sendQueue';
 import { HeartbeatManager } from './heartbeat';
 import { parseTextFrame, parseBinaryFrame } from '../protocol/parsers';
-import { PING, USER_JOINED, USER_LEFT, ERROR, MESSAGE_RECEIVED, DELIVERED } from '../protocol/messageTypes';
+import { PING, USER_JOINED, USER_LEFT, ERROR, MESSAGE_RECEIVED, DELIVERED, TYPING } from '../protocol/messageTypes';
 
 /**
  * WebSocket client wrapper with reconnection, heartbeat, and serialized sends.
@@ -18,12 +18,16 @@ export class WebSocketClient {
     this.currentServiceId = null;
   }
 
+  get queueDepth() {
+    return sendQueue.depth;
+  }
+
   /**
    * Connect to the WebSocket server.
    * @param {string} token - JWT token
    * @returns {Promise<void>}
    */
-  connect(token) {
+  connect(token, { isReconnect = false } = {}) {
     return new Promise((resolve, reject) => {
       this.token = token;
 
@@ -36,6 +40,9 @@ export class WebSocketClient {
 
       this.ws.onopen = () => {
         this.reconnectAttempts = 0;
+        if (isReconnect) {
+          this.emit('reconnect');
+        }
         this.emit('open');
         resolve();
       };
@@ -97,6 +104,21 @@ export class WebSocketClient {
     this.clearReconnect();
     if (this.ws) {
       this.ws.close(1000, 'Client closed');
+    }
+    this.cleanup();
+  }
+
+  /**
+   * Force close the WebSocket without sending leave_service
+   * and without triggering automatic reconnection.
+   * Useful for testing server-side timeout detection.
+   */
+  forceClose() {
+    this.clearReconnect();
+    if (this.ws) {
+      this.ws.onclose = null; // Prevent reconnect logic
+      this.ws.close(1001, 'Simulated disconnect');
+      this.ws = null;
     }
     this.cleanup();
   }
@@ -171,6 +193,11 @@ export class WebSocketClient {
       this.emit('delivered', frame);
       return;
     }
+
+    if (frame.type === TYPING) {
+      this.emit('typing', frame);
+      return;
+    }
   }
 
   async handleBinary(data) {
@@ -202,13 +229,21 @@ export class WebSocketClient {
     this.reconnectAttempts++;
 
     console.log(`[WebSocket] Reconnecting in ${delay}ms (attempt ${this.reconnectAttempts})`);
+    this.emit('reconnecting', { delay, attempt: this.reconnectAttempts });
 
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null;
       if (this.token) {
-        this.connect(this.token).catch((err) => {
-          console.error('[WebSocket] Reconnect failed:', err.message);
-        });
+        this.connect(this.token, { isReconnect: true })
+          .then(() => {
+            if (this.currentServiceId) {
+              // Re-join the service after reconnect
+              this.emit('reconnect_join_service', { token: this.token, serviceId: this.currentServiceId });
+            }
+          })
+          .catch((err) => {
+            console.error('[WebSocket] Reconnect failed:', err.message);
+          });
       }
     }, delay);
   }
