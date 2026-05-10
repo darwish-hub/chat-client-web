@@ -23,7 +23,7 @@ async function handleResponse(response) {
  * @param {number} [limit=50]
  */
 export async function fetchHistory(conversationId, before, limit = 50) {
-  const url = new URL(`${API_BASE}/api/conversations/${conversationId}/messages`);
+  const url = new URL(`${API_BASE}/api/conversation/${conversationId}/messages`);
   if (before) {
     url.searchParams.set('before', before);
   }
@@ -43,7 +43,7 @@ export async function fetchHistory(conversationId, before, limit = 50) {
  */
 export async function fetchThread(conversationId, messageId) {
   const response = await fetch(
-    `${API_BASE}/api/conversations/${conversationId}/messages/${messageId}/replies`,
+    `${API_BASE}/api/conversation/${conversationId}/messages/${messageId}/replies`,
     { headers: getHeaders() }
   );
   return handleResponse(response);

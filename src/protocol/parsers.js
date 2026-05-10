@@ -10,6 +10,7 @@ import {
 
 /**
  * Parse an incoming JSON text frame.
+ * Normalizes server-specific field names to the client's expected format.
  * @param {string} jsonString
  * @returns {object|null} Parsed frame or null if invalid.
  */
@@ -20,6 +21,40 @@ export function parseTextFrame(jsonString) {
       console.warn('[Parser] Frame missing type:', frame);
       return null;
     }
+
+    // Normalize server message formats to client-expected shapes
+    if (frame.type === MESSAGE_RECEIVED && frame.envelope) {
+      const env = frame.envelope;
+      return {
+        ...frame,
+        id: env.id,
+        conversationId: env.conversationId,
+        serviceId: env.serviceId,
+        fromUserId: env.senderId,
+        fromUserName: env.senderId,
+        messageType: env.type,
+        text: env.text,
+        attachment: env.attachment,
+        content: env.text
+          ? { text: env.text }
+          : env.attachment
+            ? {
+                blobId: env.attachment.blobId,
+                fileName: env.attachment.fileName,
+                mimeType: env.attachment.mimeType,
+                sizeBytes: env.attachment.sizeBytes,
+                durationMs: env.attachment.durationMs,
+              }
+            : {},
+        replyToId: env.replyToId,
+        createdAt: env.createdAt,
+      };
+    }
+
+    if (frame.type === USER_JOINED && frame.displayName !== undefined) {
+      return { ...frame, userName: frame.displayName };
+    }
+
     return frame;
   } catch (err) {
     console.warn('[Parser] Invalid JSON frame:', err.message);
@@ -51,21 +86,20 @@ export function validateServerFrame(frame) {
     case PING:
       return true;
     case USER_JOINED:
-      return typeof frame.userId === 'string' && typeof frame.userName === 'string' && typeof frame.serviceId === 'string';
+      return typeof frame.userId === 'string' && typeof frame.displayName === 'string' && typeof frame.serviceId === 'string';
     case USER_LEFT:
       return typeof frame.userId === 'string' && typeof frame.serviceId === 'string';
     case MESSAGE_RECEIVED:
       return (
-        typeof frame.id === 'string' &&
-        typeof frame.conversationId === 'string' &&
-        typeof frame.fromUserId === 'string' &&
-        typeof frame.fromUserName === 'string' &&
-        typeof frame.type === 'string' &&
-        typeof frame.content === 'object' &&
-        typeof frame.createdAt === 'string'
+        frame.envelope &&
+        typeof frame.envelope.id === 'string' &&
+        typeof frame.envelope.conversationId === 'string' &&
+        typeof frame.envelope.senderId === 'string' &&
+        typeof frame.envelope.type === 'string' &&
+        typeof frame.envelope.createdAt === 'string'
       );
     case DELIVERED:
-      return typeof frame.messageId === 'string' && typeof frame.conversationId === 'string' && typeof frame.deliveredAt === 'string';
+      return typeof frame.messageId === 'string';
     case TYPING:
       return typeof frame.conversationId === 'string' && typeof frame.userId === 'string' && typeof frame.isTyping === 'boolean';
     case ERROR:

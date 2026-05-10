@@ -29,16 +29,33 @@ export class WebSocketClient {
    */
   connect(token, { isReconnect = false } = {}) {
     return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        if (this.ws && this.ws.readyState !== WebSocket.OPEN) {
+          this.ws.close();
+        }
+        reject(new Error('WebSocket connection timed out'));
+      }, 10000);
+      const cleanupTimeout = () => clearTimeout(timeout);
+
       this.token = token;
 
       try {
-        this.ws = new WebSocket(WS_URL);
+        this.ws = new WebSocket(`${WS_URL}?token=${encodeURIComponent(token)}`);
       } catch (err) {
+        clearTimeout(timeout);
         reject(err);
         return;
       }
 
+      let settled = false;
+      const settle = (fn) => (...args) => {
+        if (settled) return;
+        settled = true;
+        fn(...args);
+      };
+
       this.ws.onopen = () => {
+        cleanupTimeout();
         this.reconnectAttempts = 0;
         if (isReconnect) {
           this.emit('reconnect');
@@ -60,14 +77,20 @@ export class WebSocketClient {
       };
 
       this.ws.onclose = (event) => {
+        cleanupTimeout();
         this.cleanup();
         this.emit('close', event);
+        if (!settled) {
+          settled = true;
+          reject(new Error(`WebSocket closed before connected (code: ${event.code})`));
+        }
         this.scheduleReconnect();
       };
 
       this.ws.onerror = (error) => {
+        cleanupTimeout();
         this.emit('error', error);
-        reject(error);
+        settle(reject)(error);
       };
     });
   }

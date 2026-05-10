@@ -23,7 +23,7 @@ async function handleResponse(response) {
  * @param {string[]} participantIds
  */
 export async function createConversation(serviceId, title, participantIds) {
-  const response = await fetch(`${API_BASE}/api/conversations`, {
+  const response = await fetch(`${API_BASE}/api/conversation`, {
     method: 'POST',
     headers: getHeaders(),
     body: JSON.stringify({ serviceId, title, participantIds }),
@@ -36,7 +36,7 @@ export async function createConversation(serviceId, title, participantIds) {
  * @param {string} [serviceId] - Optional filter
  */
 export async function listMyConversations(serviceId) {
-  const url = new URL(`${API_BASE}/api/conversations`);
+  const url = new URL(`${API_BASE}/api/conversation`);
   if (serviceId) {
     url.searchParams.set('serviceId', serviceId);
   }

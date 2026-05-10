@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import './App.css';
 import { wsClient } from './transport/wsClient';
-import { buildJoinService, buildTextMessage } from './protocol/builders';
+import { buildJoinService, buildLeaveService, buildTextMessage } from './protocol/builders';
 import AuthPanel from './ui/AuthPanel';
 import ConversationList from './ui/ConversationList';
 import MessageList from './ui/MessageList';
@@ -83,6 +83,7 @@ function App() {
       addLog(`← user_joined: ${frame.userName} (${frame.userId}) joined service ${frame.serviceId}`);
       presenceStore.setOnline(frame.serviceId, { userId: frame.userId, userName: frame.userName });
       setCurrentServiceId(frame.serviceId);
+      wsClient.currentServiceId = frame.serviceId;
       // Fetch initial online users list on first join (our own join)
       try {
         const users = await fetchOnlineUsers(frame.serviceId);
@@ -130,9 +131,22 @@ function App() {
     };
 
     const handleMessageReceived = (frame) => {
-      messageStore.add(frame);
+      const msg = {
+        id: frame.id,
+        conversationId: frame.conversationId,
+        serviceId: frame.serviceId,
+        type: frame.messageType || 'text',
+        fromUserId: frame.fromUserId,
+        fromUserName: frame.fromUserName,
+        content: frame.content,
+        text: frame.text,
+        attachment: frame.attachment,
+        replyToId: frame.replyToId,
+        createdAt: frame.createdAt,
+      };
+      messageStore.add(msg);
       setMessagesReceived((c) => c + 1);
-      addLog(`← message_received: ${frame.fromUserName}: ${frame.content?.text?.slice(0, 50) || '[non-text]'}`);
+      addLog(`← message_received: ${msg.fromUserName}: ${msg.content?.text?.slice(0, 50) || '[non-text]'}`);
     };
 
     const handleDelivered = (frame) => {
@@ -149,8 +163,8 @@ function App() {
     const handleReconnect = () => {
       addLog('WebSocket reconnected');
       // Re-join service and fetch missed messages
-      if (token) {
-        wsClient.send(buildJoinService(token));
+      if (wsClient.token && wsClient.currentServiceId) {
+        wsClient.send(buildJoinService(wsClient.currentServiceId));
         addLog('→ join_service (reconnect)');
         backfillHistory();
       }
@@ -194,9 +208,12 @@ function App() {
     setConnectionStatus('connecting');
     setAuthError(null);
     addLog('Connecting...');
+    const serviceId = 'default-service';
     try {
       await wsClient.connect(token);
-      wsClient.send(buildJoinService(token));
+      wsClient.currentServiceId = serviceId;
+      setCurrentServiceId(serviceId);
+      wsClient.send(buildJoinService(serviceId));
       addLog('→ join_service');
       // Load conversations after connect; online users fetched on user_joined
       loadConversations();
@@ -210,10 +227,18 @@ function App() {
 
 
   const handleDisconnect = () => {
+    if (wsClient.currentServiceId) {
+      try {
+        wsClient.send(buildLeaveService(wsClient.currentServiceId));
+      } catch {
+        // Ignore errors during disconnect
+      }
+    }
     wsClient.close();
     setConnectionStatus('disconnected');
     setAuthError(null);
     setCurrentServiceId(null);
+    wsClient.currentServiceId = null;
     setCurrentConversationId(null);
     conversationStore.clear();
     messageStore.clear();
@@ -266,9 +291,9 @@ function App() {
   };
 
   const handleSendBurst = async () => {
-    if (!currentConversationId) return;
+    if (!currentConversationId || !currentServiceId) return;
     for (let i = 0; i < 20; i++) {
-      const envelope = buildTextMessage(currentConversationId, `Burst message ${i + 1}`);
+      const envelope = buildTextMessage(currentConversationId, currentServiceId, `Burst message ${i + 1}`);
       try {
         wsClient.send(envelope);
         handleSendMessage(envelope);
@@ -341,7 +366,9 @@ function App() {
     const title = prompt('Conversation title:');
     if (!title) return;
     try {
-      const conversation = await createConversation('default-service', title, []);
+      const tokenPayload = parseJwt(token);
+      const myUserId = tokenPayload?.sub || 'me';
+      const conversation = await createConversation('default-service', title, [myUserId]);
       conversationStore.addOrUpdate(conversation);
       conversationStore.setCurrent(conversation.id);
       setCurrentConversationId(conversation.id);
@@ -354,17 +381,28 @@ function App() {
   const handleSendMessage = (envelope) => {
     // Optimistically add the message to the store
     const tokenPayload = parseJwt(token);
-    const optimisticType = envelope.content?.blobId ? 'file' : 'text';
+    const isFile = envelope.type === 'file_attachment' || envelope.blobId;
+    const optimisticType = isFile ? 'file' : 'text';
+    const content = isFile
+      ? {
+          blobId: envelope.blobId,
+          fileName: envelope.fileName,
+          mimeType: envelope.mimeType,
+          sizeBytes: envelope.sizeBytes,
+          durationMs: envelope.durationMs,
+        }
+      : { text: envelope.text };
     messageStore.add({
       ...envelope,
       type: optimisticType,
+      content,
       fromUserId: tokenPayload?.sub || 'me',
       fromUserName: tokenPayload?.name || 'Me',
       createdAt: new Date().toISOString(),
     });
     sentTimestamps.current.set(envelope.id, Date.now());
     setMessagesSent((c) => c + 1);
-    const logText = envelope.content?.text?.slice(0, 50) || envelope.content?.fileName || '[non-text]';
+    const logText = envelope.text?.slice(0, 50) || envelope.fileName || '[non-text]';
     addLog(`→ ${envelope.type}: ${logText}`);
   };
 
@@ -438,6 +476,7 @@ function App() {
           <TypingIndicator conversationId={currentConversationId} />
           <Composer
             conversationId={currentConversationId}
+            serviceId={currentServiceId}
             onSend={handleSendMessage}
             replyTo={replyTo}
             onDismissReply={handleDismissReply}

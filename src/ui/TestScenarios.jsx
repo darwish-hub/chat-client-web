@@ -57,7 +57,7 @@ export default function TestScenarios({
       });
 
     for (let i = 0; i < 5; i++) {
-      const envelope = buildTextMessage(convoId, `Test message ${i + 1}`);
+      const envelope = buildTextMessage(convoId, 'default-service', `Test message ${i + 1}`);
       wsClient.send(envelope);
       await waitForDelivered(envelope.id);
     }
@@ -79,7 +79,7 @@ export default function TestScenarios({
       const chunk = new Uint8Array(100).fill(i);
       const header = {
         type: 'voice_chunk',
-        messageId,
+        id: messageId,
         conversationId: convoId,
         sequenceNumber: i,
         isFinal: i === 2,
@@ -92,7 +92,7 @@ export default function TestScenarios({
     // Wait for message_received
     await new Promise((resolve, reject) => {
       const handler = (frame) => {
-        if (frame.type === 'message_received' && frame.content?.messageId === messageId) {
+        if (frame.type === 'message_received' && frame.id === messageId) {
           wsClient.off('message_received', handler);
           resolve();
         }

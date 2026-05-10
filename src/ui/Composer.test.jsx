@@ -9,14 +9,14 @@ vi.mock('../transport/wsClient', () => ({
 }));
 
 vi.mock('../protocol/builders', () => ({
-  buildTextMessage: vi.fn((conversationId, text, replyToId) => ({
+  buildTextMessage: vi.fn((conversationId, serviceId, text, replyToId) => ({
     type: 'text_message',
-    id: 'test-id',
+    id: 'msg-1',
     conversationId,
-    content: { text },
+    serviceId,
+    text,
     replyToId,
   })),
-  buildTyping: vi.fn(),
   buildFileAttachment: vi.fn(),
 }));
 
@@ -26,13 +26,13 @@ describe('Composer', () => {
   });
 
   it('renders textarea and send button', () => {
-    render(<Composer conversationId="conv-1" />);
+    render(<Composer conversationId="conv-1" serviceId="svc-1" />);
     expect(screen.getByPlaceholderText('Type a message...')).toBeInTheDocument();
     expect(screen.getByText('Send')).toBeInTheDocument();
   });
 
   it('shows disabled state when no conversation', () => {
-    render(<Composer conversationId={null} />);
+    render(<Composer conversationId={null} serviceId={null} />);
     expect(screen.getByPlaceholderText('Select a conversation first')).toBeDisabled();
     expect(screen.getByText('Send')).toBeDisabled();
   });
@@ -43,7 +43,7 @@ describe('Composer', () => {
       fromUserName: 'Alice',
       content: { text: 'Original message' },
     };
-    render(<Composer conversationId="conv-1" replyTo={replyTo} onDismissReply={vi.fn()} />);
+    render(<Composer conversationId="conv-1" serviceId="svc-1" replyTo={replyTo} onDismissReply={vi.fn()} />);
     expect(screen.getByText(/Replying to/)).toBeInTheDocument();
     expect(screen.getByText('Alice')).toBeInTheDocument();
   });
@@ -55,20 +55,20 @@ describe('Composer', () => {
       fromUserName: 'Alice',
       content: { text: 'Original message' },
     };
-    render(<Composer conversationId="conv-1" replyTo={replyTo} onDismissReply={onDismissReply} />);
+    render(<Composer conversationId="conv-1" serviceId="svc-1" replyTo={replyTo} onDismissReply={onDismissReply} />);
     fireEvent.click(screen.getByTitle('Dismiss reply'));
     expect(onDismissReply).toHaveBeenCalled();
   });
 
   it('disables send button when composer is disabled', () => {
-    render(<Composer conversationId="conv-1" disabled />);
+    render(<Composer conversationId="conv-1" serviceId="svc-1" disabled />);
     const input = screen.getByPlaceholderText('Type a message...');
     fireEvent.change(input, { target: { value: 'Hello' } });
     expect(screen.getByText('Send')).toBeDisabled();
   });
 
   it('applies error class when error prop is true', () => {
-    render(<Composer conversationId="conv-1" error />);
+    render(<Composer conversationId="conv-1" serviceId="svc-1" error />);
     expect(screen.getByPlaceholderText('Type a message...').className).toContain('composer-error');
   });
 });

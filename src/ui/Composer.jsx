@@ -6,7 +6,7 @@ import FileUploader from './FileUploader';
 
 const TYPING_DEBOUNCE_MS = 3000;
 
-export default function Composer({ conversationId, onSend, replyTo, onDismissReply, disabled, error }) {
+export default function Composer({ conversationId, serviceId, onSend, replyTo, onDismissReply, disabled, error }) {
   const [text, setText] = useState('');
   const [showUploader, setShowUploader] = useState(false);
   const typingTimeoutRef = useRef(null);
@@ -39,7 +39,7 @@ export default function Composer({ conversationId, onSend, replyTo, onDismissRep
     if (!text.trim() || !conversationId) return;
     clearTypingTimeout();
     emitTyping(false);
-    const envelope = buildTextMessage(conversationId, text.trim(), replyTo?.id);
+    const envelope = buildTextMessage(conversationId, serviceId, text.trim(), replyTo?.id);
     wsClient.send(envelope);
     onSend?.(envelope);
     setText('');

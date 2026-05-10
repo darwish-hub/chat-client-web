@@ -8,6 +8,7 @@ export const JOIN_SERVICE = 'join_service';
 export const LEAVE_SERVICE = 'leave_service';
 export const TEXT_MESSAGE = 'text_message';
 export const VOICE_CHUNK = 'voice_chunk';
+export const FILE_ATTACHMENT = 'file_attachment';
 export const TYPING = 'typing';
 export const ACK = 'ack';
 export const PONG = 'pong';
@@ -25,6 +26,7 @@ export const CLIENT_MESSAGE_TYPES = [
   LEAVE_SERVICE,
   TEXT_MESSAGE,
   VOICE_CHUNK,
+  FILE_ATTACHMENT,
   TYPING,
   ACK,
   PONG,

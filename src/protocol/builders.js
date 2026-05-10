@@ -5,6 +5,7 @@ import {
   LEAVE_SERVICE,
   TEXT_MESSAGE,
   VOICE_CHUNK,
+  FILE_ATTACHMENT,
   TYPING,
   ACK,
   PONG,
@@ -12,39 +13,43 @@ import {
 
 /**
  * Build a join_service frame.
- * @param {string} token - JWT token
- * @returns {{type: string, token: string}}
+ * @param {string} serviceId - Service identifier
+ * @returns {{type: string, serviceId: string}}
  */
-export function buildJoinService(token) {
+export function buildJoinService(serviceId) {
   return {
     type: JOIN_SERVICE,
-    token,
+    serviceId,
   };
 }
 
 /**
  * Build a leave_service frame.
- * @returns {{type: string}}
+ * @param {string} serviceId - Service identifier
+ * @returns {{type: string, serviceId: string}}
  */
-export function buildLeaveService() {
+export function buildLeaveService(serviceId) {
   return {
     type: LEAVE_SERVICE,
+    serviceId,
   };
 }
 
 /**
  * Build a text_message frame.
  * @param {string} conversationId
+ * @param {string} serviceId
  * @param {string} text
  * @param {string} [replyToId]
- * @returns {{type: string, id: string, conversationId: string, content: {text: string}, replyToId?: string}}
+ * @returns {{type: string, id: string, conversationId: string, serviceId: string, text: string, replyToId?: string}}
  */
-export function buildTextMessage(conversationId, text, replyToId) {
+export function buildTextMessage(conversationId, serviceId, text, replyToId) {
   const envelope = {
     type: TEXT_MESSAGE,
     id: uuidv4(),
     conversationId,
-    content: { text },
+    serviceId,
+    text,
   };
   if (replyToId) {
     envelope.replyToId = replyToId;
@@ -54,16 +59,16 @@ export function buildTextMessage(conversationId, text, replyToId) {
 
 /**
  * Build a voice_chunk header frame.
- * @param {string} messageId
+ * @param {string} id
  * @param {string} conversationId
  * @param {number} sequenceNumber
  * @param {boolean} isFinal
- * @returns {{type: string, messageId: string, conversationId: string, sequenceNumber: number, isFinal: boolean}}
+ * @returns {{type: string, id: string, conversationId: string, sequenceNumber: number, isFinal: boolean}}
  */
-export function buildVoiceChunk(messageId, conversationId, sequenceNumber, isFinal) {
+export function buildVoiceChunk(id, conversationId, sequenceNumber, isFinal) {
   return {
     type: VOICE_CHUNK,
-    messageId,
+    id,
     conversationId,
     sequenceNumber,
     isFinal,
@@ -115,22 +120,20 @@ export function buildPong() {
  * @param {number} sizeBytes
  * @param {number} [durationMs]
  * @param {string} [replyToId]
- * @returns {{type: string, id: string, conversationId: string, content: object, replyToId?: string}}
+ * @returns {{type: string, id: string, conversationId: string, blobId: string, fileName: string, mimeType: string, sizeBytes: number, durationMs?: number, replyToId?: string}}
  */
 export function buildFileAttachment(conversationId, blobId, fileName, mimeType, sizeBytes, durationMs, replyToId) {
   const envelope = {
-    type: TEXT_MESSAGE,
+    type: FILE_ATTACHMENT,
     id: uuidv4(),
     conversationId,
-    content: {
-      blobId,
-      fileName,
-      mimeType,
-      sizeBytes,
-    },
+    blobId,
+    fileName,
+    mimeType,
+    sizeBytes,
   };
   if (durationMs) {
-    envelope.content.durationMs = durationMs;
+    envelope.durationMs = durationMs;
   }
   if (replyToId) {
     envelope.replyToId = replyToId;
