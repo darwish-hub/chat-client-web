@@ -1,0 +1,526 @@
+.app-container {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.app-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  background: #1a1a2e;
+  color: #fff;
+  border-bottom: 1px solid #333;
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.status-indicator {
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.status-indicator.connected {
+  background: #22c55e;
+  color: #fff;
+}
+
+.status-indicator.disconnected {
+  background: #ef4444;
+  color: #fff;
+}
+
+.status-indicator.connecting {
+  background: #3b82f6;
+  color: #fff;
+}
+
+.status-indicator.reconnecting {
+  background: #f59e0b;
+  color: #fff;
+}
+
+.app-main {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 250px 1fr 200px;
+  grid-template-rows: auto 1fr auto;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  background: #0f0f1a;
+  overflow: hidden;
+}
+
+.panel {
+  background: #16213e;
+  border: 1px solid #1a1a2e;
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+  color: #e2e8f0;
+  overflow: auto;
+}
+
+.panel h2 {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
+}
+
+.auth-panel {
+  grid-column: 1 / -1;
+}
+
+.conversations-panel {
+  grid-row: 2 / 4;
+}
+
+.messages-panel {
+  grid-row: 2;
+  overflow-y: auto;
+}
+
+.composer-panel {
+  grid-row: 3;
+}
+
+.presence-panel {
+  grid-row: 2;
+}
+
+.logs-panel {
+  grid-row: 3;
+}
+
+.logs-content {
+  font-family: 'Courier New', monospace;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.log-entry {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.125rem 0;
+  border-bottom: 1px solid #1a1a2e;
+}
+
+.log-timestamp {
+  color: #64748b;
+  white-space: nowrap;
+}
+
+.log-message {
+  color: #e2e8f0;
+  word-break: break-all;
+}
+
+/* Auth Panel */
+.auth-panel-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.auth-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+}
+
+.auth-token-input {
+  flex: 1;
+  background: #0f0f1a;
+  border: 1px solid #333;
+  border-radius: 0.375rem;
+  color: #e2e8f0;
+  padding: 0.5rem;
+  font-family: 'Courier New', monospace;
+  font-size: 0.75rem;
+  resize: vertical;
+}
+
+.auth-token-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.auth-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.auth-btn {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.auth-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.auth-btn-connect {
+  background: #22c55e;
+  color: #fff;
+}
+
+.auth-btn-disconnect {
+  background: #ef4444;
+  color: #fff;
+}
+
+.auth-error {
+  padding: 0.5rem 0.75rem;
+  background: #450a0a;
+  border: 1px solid #7f1d1d;
+  border-radius: 0.375rem;
+  color: #fca5a5;
+  font-size: 0.875rem;
+}
+
+.auth-status-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.auth-status-label {
+  color: #94a3b8;
+}
+
+.auth-status-value {
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.auth-status-connected {
+  color: #22c55e;
+}
+
+.auth-status-connecting {
+  color: #3b82f6;
+}
+
+.auth-status-disconnected {
+  color: #ef4444;
+}
+
+/* Presence Panel */
+.online-users-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.online-user {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0;
+  font-size: 0.875rem;
+}
+
+.online-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #22c55e;
+}
+
+/* Conversation List */
+.conversation-list {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.conversation-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.conversation-list-header h3 {
+  margin: 0;
+  font-size: 0.875rem;
+  color: #94a3b8;
+}
+
+.btn-new-convo {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: none;
+  background: #22c55e;
+  color: #fff;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.conversation-items {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.conversation-empty {
+  color: #64748b;
+  font-size: 0.875rem;
+  padding: 0.5rem 0;
+}
+
+.conversation-item {
+  padding: 0.5rem;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  transition: background 0.15s;
+  margin-bottom: 0.25rem;
+}
+
+.conversation-item:hover {
+  background: #1a1a2e;
+}
+
+.conversation-item.active {
+  background: #1e3a5f;
+  border-left: 3px solid #3b82f6;
+}
+
+.conversation-title {
+  font-weight: 600;
+  font-size: 0.875rem;
+  color: #e2e8f0;
+}
+
+.conversation-meta {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+/* Message List */
+.message-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  overflow-y: auto;
+  height: 100%;
+}
+
+.message-empty {
+  color: #64748b;
+  text-align: center;
+  padding: 2rem 0;
+}
+
+.message-item {
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.5rem;
+  background: #1a1a2e;
+  max-width: 80%;
+}
+
+.message-mine {
+  align-self: flex-end;
+  background: #1e3a5f;
+}
+
+.message-header {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.25rem;
+  font-size: 0.75rem;
+}
+
+.message-sender {
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+.message-time {
+  color: #64748b;
+}
+
+.message-delivered {
+  color: #22c55e;
+  font-weight: 600;
+}
+
+.message-content {
+  color: #e2e8f0;
+  word-break: break-word;
+  font-size: 0.875rem;
+}
+
+/* Composer */
+.composer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.composer-textarea {
+  width: 100%;
+  background: #0f0f1a;
+  border: 1px solid #333;
+  border-radius: 0.375rem;
+  color: #e2e8f0;
+  padding: 0.5rem;
+  font-size: 0.875rem;
+  resize: vertical;
+}
+
+.composer-textarea:disabled {
+  opacity: 0.5;
+}
+
+.composer-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.composer-counter {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.composer-counter-warning {
+  color: #f59e0b;
+}
+
+.composer-send-btn {
+  padding: 0.375rem 1rem;
+  border: none;
+  border-radius: 0.375rem;
+  background: #3b82f6;
+  color: #fff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.composer-send-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Voice Recorder */
+.voice-recorder {
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid #1a1a2e;
+}
+
+.voice-recorder-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.voice-ptt-btn {
+  flex: 1;
+  padding: 0.75rem;
+  border: 2px solid #333;
+  border-radius: 0.5rem;
+  background: #1a1a2e;
+  color: #e2e8f0;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.voice-ptt-btn:active,
+.voice-ptt-btn.recording {
+  background: #450a0a;
+  border-color: #ef4444;
+  color: #fca5a5;
+}
+
+.voice-ptt-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.voice-timer {
+  font-family: 'Courier New', monospace;
+  font-size: 0.875rem;
+  color: #ef4444;
+  min-width: 3rem;
+}
+
+.voice-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  color: #94a3b8;
+  cursor: pointer;
+}
+
+/* Packet Loss Toggle */
+.packet-loss-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  color: #f59e0b;
+  cursor: pointer;
+}
+
+/* Voice message in list */
+.voice-message {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.voice-message audio {
+  max-width: 100%;
+  height: 32px;
+}
+
+@media (max-width: 768px) {
+  .app-main {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto;
+  }
+  
+  .conversations-panel,
+  .messages-panel,
+  .composer-panel,
+  .presence-panel,
+  .logs-panel {
+    grid-column: 1;
+    grid-row: auto;
+  }
+}
