@@ -78,11 +78,13 @@ class VoiceSessionStore {
    * @param {string} key - `${messageId}:${fromUserId}`
    * @param {string} messageId
    * @param {string} fromUserId
+   * @param {string} conversationId
    */
-  startInbound(key, messageId, fromUserId) {
+  startInbound(key, messageId, fromUserId, conversationId) {
     if (!this.inbound.has(key)) {
       this.inbound.set(key, {
         messageId,
+        conversationId,
         fromUserId,
         chunks: [],
         isFinal: false,

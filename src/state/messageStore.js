@@ -43,12 +43,15 @@ class MessageStore {
   }
 
   ack(messageId) {
-    this.deliveredIds.add(messageId);
     const msg = this.messages.get(messageId);
     if (msg) {
+      this.deliveredIds.add(messageId);
       msg.deliveredAt = new Date().toISOString();
       this.messages.set(messageId, msg);
       this.notify(msg.conversationId);
+    } else {
+      console.warn(`[MessageStore] Received delivered for unknown messageId: ${messageId}`);
+      this.deliveredIds.add(messageId);
     }
   }
 

@@ -1,4 +1,4 @@
-import { API_BASE } from '../config';
+import { API_BASE, MAX_UPLOAD_BYTES } from '../config';
 
 /**
  * Upload a file with progress tracking via XMLHttpRequest.
@@ -7,6 +7,10 @@ import { API_BASE } from '../config';
  * @returns {Promise<{blobId: string, url: string, fileName: string, mimeType: string, sizeBytes: number}>}
  */
 export function uploadFile(file, onProgress) {
+  if (file.size > MAX_UPLOAD_BYTES) {
+    return Promise.reject(new Error(`File too large: ${file.size} bytes exceeds the ${MAX_UPLOAD_BYTES} byte limit`));
+  }
+
   return new Promise((resolve, reject) => {
     const token = localStorage.getItem('chathub-token');
     const xhr = new XMLHttpRequest();

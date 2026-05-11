@@ -18,6 +18,7 @@ import { presenceStore } from './state/presenceStore';
 import { createConversation, listMyConversations } from './api/conversations';
 import { fetchHistory } from './api/history';
 import { fetchOnlineUsers } from './api/presence';
+import { voiceSessionStore } from './state/voiceSessionStore';
 
 function App() {
   const [connectionStatus, setConnectionStatus] = useState('disconnected');
@@ -80,11 +81,10 @@ function App() {
     };
 
     const handleUserJoined = async (frame) => {
-      addLog(`← user_joined: ${frame.userName} (${frame.userId}) joined service ${frame.serviceId}`);
-      presenceStore.setOnline(frame.serviceId, { userId: frame.userId, userName: frame.userName });
+      addLog(`← user_joined: ${frame.displayName} (${frame.userId}) joined service ${frame.serviceId}`);
+      presenceStore.setOnline(frame.serviceId, { userId: frame.userId, displayName: frame.displayName });
       setCurrentServiceId(frame.serviceId);
       wsClient.currentServiceId = frame.serviceId;
-      // Fetch initial online users list on first join (our own join)
       try {
         const users = await fetchOnlineUsers(frame.serviceId);
         for (const user of users) {
@@ -128,6 +128,13 @@ function App() {
         setComposerError(true);
         setTimeout(() => setComposerError(false), 5000);
       }
+      if (frame.code === 'service_not_found') {
+        setCurrentServiceId(null);
+        wsClient.currentServiceId = null;
+      }
+      if (frame.code === 'invalid_reply') {
+        setReplyTo(null);
+      }
     };
 
     const handleMessageReceived = (frame) => {
@@ -136,9 +143,7 @@ function App() {
         conversationId: frame.conversationId,
         serviceId: frame.serviceId,
         type: frame.messageType || 'text',
-        fromUserId: frame.fromUserId,
-        fromUserName: frame.fromUserName,
-        content: frame.content,
+        senderId: frame.senderId,
         text: frame.text,
         attachment: frame.attachment,
         replyToId: frame.replyToId,
@@ -146,7 +151,7 @@ function App() {
       };
       messageStore.add(msg);
       setMessagesReceived((c) => c + 1);
-      addLog(`← message_received: ${msg.fromUserName}: ${msg.content?.text?.slice(0, 50) || '[non-text]'}`);
+      addLog(`← message_received: ${msg.senderId}: ${msg.text?.slice(0, 50) || '[non-text]'}`);
     };
 
     const handleDelivered = (frame) => {
@@ -183,6 +188,21 @@ function App() {
     wsClient.on('delivered', handleDelivered);
     wsClient.on('reconnect', handleReconnect);
 
+    const handleVoiceChunkText = (frame) => {
+      const key = `${frame.id}:${frame.fromUserId}`;
+      voiceSessionStore.startInbound(key, frame.id, frame.fromUserId, frame.conversationId);
+      addLog(`← voice_chunk_text: id=${frame.id} seq=${frame.sequenceNumber} isFinal=${frame.isFinal}`);
+    };
+
+    const handleBinary = (frame) => {
+      // Route to active voice session if one exists
+      // This will be handled by audioPlayer in Phase 4
+      addLog(`← binary: ${frame.data.byteLength} bytes`);
+    };
+
+    wsClient.on('voice_chunk_text', handleVoiceChunkText);
+    wsClient.on('binary', handleBinary);
+
     return () => {
       wsClient.off('open', handleOpen);
       wsClient.off('close', handleClose);
@@ -196,6 +216,8 @@ function App() {
       wsClient.off('message_received', handleMessageReceived);
       wsClient.off('delivered', handleDelivered);
       wsClient.off('reconnect', handleReconnect);
+      wsClient.off('voice_chunk_text', handleVoiceChunkText);
+      wsClient.off('binary', handleBinary);
     };
   }, [addLog]);
 
@@ -259,7 +281,7 @@ function App() {
 
   const handleReply = (message) => {
     setReplyTo(message);
-    addLog(`Replying to message: ${message.content?.text?.slice(0, 30) || '[attachment]'}`);
+    addLog(`Replying to message: ${message.text?.slice(0, 30) || '[attachment]'}`);
   };
 
   const handleDismissReply = () => {
@@ -280,11 +302,12 @@ function App() {
     const lastMsg = msgs[msgs.length - 1];
     const before = lastMsg ? lastMsg.createdAt : undefined;
     try {
-      const history = await fetchHistory(currentConversationId, before);
-      for (const msg of history) {
+      const result = await fetchHistory(currentConversationId, before);
+      const messages = result.messages || [];
+      for (const msg of messages) {
         messageStore.add(msg);
       }
-      addLog(`Backfilled ${history.length} missed messages`);
+      addLog(`Backfilled ${messages.length} missed messages`);
     } catch (err) {
       addLog(`Failed to backfill history: ${err.message}`);
     }
@@ -350,13 +373,13 @@ function App() {
   const handleSelectConversation = async (id) => {
     conversationStore.setCurrent(id);
     setCurrentConversationId(id);
-    // Fetch history
     try {
-      const history = await fetchHistory(id);
-      for (const msg of history) {
+      const result = await fetchHistory(id);
+      const msgs = result.messages || [];
+      for (const msg of msgs) {
         messageStore.add(msg);
       }
-      addLog(`Loaded ${history.length} messages for conversation ${id}`);
+      addLog(`Loaded ${msgs.length} messages for conversation ${id}`);
     } catch (err) {
       addLog(`Failed to load history: ${err.message}`);
     }
@@ -379,11 +402,9 @@ function App() {
   };
 
   const handleSendMessage = (envelope) => {
-    // Optimistically add the message to the store
     const tokenPayload = parseJwt(token);
-    const isFile = envelope.type === 'file_attachment' || envelope.blobId;
-    const optimisticType = isFile ? 'file' : 'text';
-    const content = isFile
+    const isFile = envelope.type === 'file_attachment' || envelope.type === 'voice_message';
+    const attachment = isFile
       ? {
           blobId: envelope.blobId,
           fileName: envelope.fileName,
@@ -391,13 +412,14 @@ function App() {
           sizeBytes: envelope.sizeBytes,
           durationMs: envelope.durationMs,
         }
-      : { text: envelope.text };
+      : null;
     messageStore.add({
       ...envelope,
-      type: optimisticType,
-      content,
-      fromUserId: tokenPayload?.sub || 'me',
-      fromUserName: tokenPayload?.name || 'Me',
+      type: isFile ? 'file' : 'text',
+      senderId: tokenPayload?.sub || 'me',
+      text: envelope.text || null,
+      attachment: attachment,
+      replyToId: envelope.replyToId || null,
       createdAt: new Date().toISOString(),
     });
     sentTimestamps.current.set(envelope.id, Date.now());

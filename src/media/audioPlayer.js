@@ -3,47 +3,108 @@
  * Schedules playback with AudioBufferSourceNode to eliminate gaps.
  */
 
+import { voiceSessionStore } from '../state/voiceSessionStore';
+
 let audioContext = null;
 
 function getAudioContext() {
-  if (!audioContext) {
+  if (!audioContext || audioContext.state === 'closed') {
     audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (audioContext.state === 'suspended') {
+    audioContext.resume();
   }
   return audioContext;
 }
 
+const sessions = new Map();
+
 /**
- * Decode an ArrayBuffer to AudioBuffer.
- * @param {ArrayBuffer} arrayBuffer
- * @returns {Promise<AudioBuffer>}
+ * Enqueue a chunk for playback.
+ * Decodes the ArrayBuffer and schedules playback in sequence order.
+ * @param {string} sessionId - Voice session key (e.g., messageId:fromUserId)
+ * @param {number} sequenceNumber - Chunk sequence number
+ * @param {ArrayBuffer} arrayBuffer - Raw audio bytes
  */
-async function decodeChunk(arrayBuffer) {
+export async function enqueueChunk(sessionId, sequenceNumber, arrayBuffer) {
   const ctx = getAudioContext();
-  // MediaRecorder produces Blob data; we need to wrap it properly for decoding
-  // For webm/ogg chunks, the decoder may fail on individual chunks.
-  // We'll accumulate chunks and decode the concatenated buffer when final.
+
+  if (!sessions.has(sessionId)) {
+    sessions.set(sessionId, {
+      chunks: new Map(),
+      nextSequence: 0,
+      playing: false,
+      scheduledEndTime: 0,
+    });
+  }
+
+  const session = sessions.get(sessionId);
+
   try {
-    return await ctx.decodeAudioData(arrayBuffer.slice(0));
-  } catch {
-    return null;
+    const audioBuffer = await ctx.decodeAudioData(arrayBuffer.slice(0));
+    if (!audioBuffer) return;
+    session.chunks.set(sequenceNumber, audioBuffer);
+    playNextChunks(sessionId);
+  } catch (err) {
+    console.warn(`[AudioPlayer] Failed to decode chunk ${sequenceNumber} for session ${sessionId}:`, err.message);
   }
 }
 
 /**
- * Enqueue a chunk for playback.
- * @param {string} messageId
- * @param {number} sequenceNumber
- * @param {ArrayBuffer} arrayBuffer
+ * Play queued chunks in sequence order.
+ * @param {string} sessionId
  */
-export async function enqueueChunk(messageId, sequenceNumber, arrayBuffer) {
-  // For live streaming, individual chunks may not be decodable.
-  // We'll store them and decode when the session is final.
-  // For now, this is a placeholder for the full implementation.
-  console.log(`[AudioPlayer] Chunk ${sequenceNumber} for ${messageId}, size: ${arrayBuffer.byteLength}`);
+function playNextChunks(sessionId) {
+  const ctx = getAudioContext();
+  const session = sessions.get(sessionId);
+  if (!session || session.playing) return;
+
+  session.playing = true;
+  const playback = () => {
+    const chunk = session.chunks.get(session.nextSequence);
+    if (!chunk) {
+      session.playing = false;
+
+      if (voiceSessionStore.isInboundFinal(sessionId)) {
+        sessions.delete(sessionId);
+        console.log(`[AudioPlayer] Session ${sessionId} complete`);
+      }
+      return;
+    }
+
+    session.chunks.delete(session.nextSequence);
+    session.nextSequence++;
+
+    const source = ctx.createBufferSource();
+    source.buffer = chunk;
+
+    const startTime = Math.max(ctx.currentTime, session.scheduledEndTime);
+    source.connect(ctx.destination);
+    source.start(startTime);
+
+    session.scheduledEndTime = startTime + chunk.duration;
+
+    source.onended = () => {
+      playback();
+    };
+  };
+
+  playback();
 }
 
 /**
- * Play a complete audio blob.
+ * Mark a session as complete and flush remaining buffer.
+ * @param {string} sessionId
+ */
+export function completeSession(sessionId) {
+  const session = sessions.get(sessionId);
+  if (session) {
+    voiceSessionStore.finalizeInbound(sessionId);
+  }
+}
+
+/**
+ * Play a complete audio blob (for replay of assembled messages).
  * @param {Blob} blob
  * @returns {Promise<HTMLAudioElement>}
  */

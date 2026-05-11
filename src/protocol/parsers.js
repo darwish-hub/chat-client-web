@@ -3,6 +3,7 @@ import {
   USER_JOINED,
   USER_LEFT,
   MESSAGE_RECEIVED,
+  VOICE_CHUNK,
   DELIVERED,
   TYPING,
   ERROR,
@@ -10,7 +11,8 @@ import {
 
 /**
  * Parse an incoming JSON text frame.
- * Normalizes server-specific field names to the client's expected format.
+ * Unwraps server-specific envelope structures and normalizes
+ * field names to match the data model (e.g., senderId, displayName, flat text).
  * @param {string} jsonString
  * @returns {object|null} Parsed frame or null if invalid.
  */
@@ -22,37 +24,40 @@ export function parseTextFrame(jsonString) {
       return null;
     }
 
-    // Normalize server message formats to client-expected shapes
     if (frame.type === MESSAGE_RECEIVED && frame.envelope) {
       const env = frame.envelope;
       return {
-        ...frame,
+        type: MESSAGE_RECEIVED,
         id: env.id,
         conversationId: env.conversationId,
         serviceId: env.serviceId,
-        fromUserId: env.senderId,
-        fromUserName: env.senderId,
+        senderId: env.senderId,
         messageType: env.type,
-        text: env.text,
-        attachment: env.attachment,
-        content: env.text
-          ? { text: env.text }
-          : env.attachment
-            ? {
-                blobId: env.attachment.blobId,
-                fileName: env.attachment.fileName,
-                mimeType: env.attachment.mimeType,
-                sizeBytes: env.attachment.sizeBytes,
-                durationMs: env.attachment.durationMs,
-              }
-            : {},
-        replyToId: env.replyToId,
+        text: env.text || null,
+        attachment: env.attachment || null,
+        replyToId: env.replyToId || null,
         createdAt: env.createdAt,
       };
     }
 
-    if (frame.type === USER_JOINED && frame.displayName !== undefined) {
-      return { ...frame, userName: frame.displayName };
+    if (frame.type === USER_JOINED) {
+      return {
+        type: USER_JOINED,
+        userId: frame.userId,
+        serviceId: frame.serviceId,
+        displayName: frame.displayName,
+      };
+    }
+
+    if (frame.type === VOICE_CHUNK) {
+      return {
+        type: VOICE_CHUNK,
+        id: frame.id,
+        conversationId: frame.conversationId,
+        sequenceNumber: frame.sequenceNumber,
+        isFinal: frame.isFinal,
+        fromUserId: frame.fromUserId,
+      };
     }
 
     return frame;
@@ -76,6 +81,8 @@ export function parseBinaryFrame(buffer) {
 
 /**
  * Validate a server-to-client frame shape.
+ * Returns true if the frame has the required fields for its type.
+ * Malformed frames should be logged and discarded without disconnecting.
  * @param {object} frame
  * @returns {boolean}
  */
@@ -98,6 +105,14 @@ export function validateServerFrame(frame) {
         typeof frame.envelope.type === 'string' &&
         typeof frame.envelope.createdAt === 'string'
       );
+    case VOICE_CHUNK:
+      return (
+        typeof frame.id === 'string' &&
+        typeof frame.conversationId === 'string' &&
+        typeof frame.sequenceNumber === 'number' &&
+        typeof frame.isFinal === 'boolean' &&
+        typeof frame.fromUserId === 'string'
+      );
     case DELIVERED:
       return typeof frame.messageId === 'string';
     case TYPING:
@@ -105,7 +120,7 @@ export function validateServerFrame(frame) {
     case ERROR:
       return typeof frame.code === 'string' && typeof frame.message === 'string';
     default:
-      console.warn('[Parser] Unknown frame type:', frame.type);
+      console.warn('[Parser] Unknown frame type in validation:', frame.type);
       return false;
   }
 }

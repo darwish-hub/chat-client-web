@@ -3,7 +3,7 @@
  */
 class PresenceStore {
   constructor() {
-    this.onlineByService = new Map(); // serviceId -> Map<userId, {userId, userName, status}>
+    this.onlineByService = new Map(); // serviceId -> Map<userId, {userId, displayName, lastSeen, isOnline, isTyping, typingConversationId}>
     this.typingByConversation = new Map(); // conversationId -> Map<userId, {timeoutId}>
     this.listeners = new Set();
   }
@@ -22,14 +22,22 @@ class PresenceStore {
   /**
    * Mark a user as online in a service.
    * @param {string} serviceId
-   * @param {{userId: string, userName: string}} user
+   * @param {{userId: string, displayName: string, lastSeen?: string}} user
    */
   setOnline(serviceId, user) {
     if (!this.onlineByService.has(serviceId)) {
       this.onlineByService.set(serviceId, new Map());
     }
     const serviceUsers = this.onlineByService.get(serviceId);
-    serviceUsers.set(user.userId, { ...user, status: 'online' });
+    const existing = serviceUsers.get(user.userId);
+    serviceUsers.set(user.userId, {
+      userId: user.userId,
+      displayName: user.displayName || user.userId,
+      lastSeen: user.lastSeen || new Date().toISOString(),
+      isOnline: true,
+      isTyping: existing?.isTyping || false,
+      typingConversationId: existing?.typingConversationId || null,
+    });
     this.notify();
   }
 
@@ -52,7 +60,7 @@ class PresenceStore {
   /**
    * Get all online users for a service.
    * @param {string} serviceId
-   * @returns {Array<{userId: string, userName: string, status: string}>}
+   * @returns {Array<{userId: string, displayName: string, lastSeen: string, isOnline: boolean}>}
    */
   getOnline(serviceId) {
     const serviceUsers = this.onlineByService.get(serviceId);
@@ -76,6 +84,15 @@ class PresenceStore {
     const existing = convoTypers.get(userId);
     if (existing?.timeoutId) {
       clearTimeout(existing.timeoutId);
+    }
+
+    // Update typing state in user record
+    for (const [, serviceUsers] of this.onlineByService) {
+      const user = serviceUsers.get(userId);
+      if (user) {
+        user.isTyping = isTyping;
+        user.typingConversationId = isTyping ? conversationId : null;
+      }
     }
 
     if (isTyping) {

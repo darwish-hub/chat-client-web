@@ -1,8 +1,8 @@
-import { WS_URL, RECONNECT_DELAY_MS, MAX_RECONNECT_DELAY_MS } from '../config';
+import { WS_URL, RECONNECT_DELAY_MS, MAX_RECONNECT_DELAY_MS, HEARTBEAT_TIMEOUT_MS } from '../config';
 import { sendQueue } from './sendQueue';
 import { HeartbeatManager } from './heartbeat';
-import { parseTextFrame, parseBinaryFrame } from '../protocol/parsers';
-import { PING, USER_JOINED, USER_LEFT, ERROR, MESSAGE_RECEIVED, DELIVERED, TYPING } from '../protocol/messageTypes';
+import { parseTextFrame, parseBinaryFrame, validateServerFrame } from '../protocol/parsers';
+import { PING, USER_JOINED, USER_LEFT, ERROR, MESSAGE_RECEIVED, VOICE_CHUNK, DELIVERED, TYPING } from '../protocol/messageTypes';
 
 /**
  * WebSocket client wrapper with reconnection, heartbeat, and serialized sends.
@@ -57,6 +57,12 @@ export class WebSocketClient {
       this.ws.onopen = () => {
         cleanupTimeout();
         this.reconnectAttempts = 0;
+
+        if (!this.heartbeat) {
+          this.heartbeat = new HeartbeatManager(this);
+        }
+        this.heartbeat.start();
+
         if (isReconnect) {
           this.emit('reconnect');
         }
@@ -67,10 +73,17 @@ export class WebSocketClient {
       this.ws.onmessage = (event) => {
         if (typeof event.data === 'string') {
           const frame = parseTextFrame(event.data);
-          if (frame) {
-            this.handleFrame(frame);
-            this.emit('message', frame);
+          if (!frame) {
+            console.warn('[WebSocket] Failed to parse text frame');
+            return;
           }
+          if (!validateServerFrame(frame)) {
+            console.warn('[WebSocket] Invalid frame structure, discarding:', frame.type, frame);
+            this.emit('protocol_log', { direction: 'in', type: 'invalid', data: frame, timestamp: Date.now() });
+            return;
+          }
+          this.handleFrame(frame);
+          this.emit('message', frame);
         } else if (event.data instanceof ArrayBuffer || event.data instanceof Blob) {
           this.handleBinary(event.data);
         }
@@ -181,11 +194,9 @@ export class WebSocketClient {
 
   handleFrame(frame) {
     if (frame.type === PING) {
-      if (!this.heartbeat) {
-        this.heartbeat = new HeartbeatManager(this);
-        this.heartbeat.start();
+      if (this.heartbeat) {
+        this.heartbeat.onPing();
       }
-      this.heartbeat.onPing();
       return;
     }
 
@@ -204,11 +215,40 @@ export class WebSocketClient {
       if (frame.code === 'invalid_token') {
         this.emit('auth_error', frame);
       }
+      if (frame.code === 'service_not_found') {
+        this.emit('service_not_found', frame);
+      }
+      if (frame.code === 'invalid_reply') {
+        this.emit('invalid_reply', frame);
+      }
+      if (frame.code === 'invalid_attachment') {
+        this.emit('invalid_attachment', frame);
+      }
+      if (frame.code === 'voice_processing_error') {
+        this.emit('voice_processing_error', frame);
+      }
+      if (frame.code === 'voice_assembly_error') {
+        this.emit('voice_assembly_error', frame);
+      }
+      if (frame.code === 'rate_limit_exceeded') {
+        this.emit('rate_limit_exceeded', frame);
+      }
+      if (frame.code === 'not_participant') {
+        this.emit('not_participant', frame);
+      }
+      if (frame.code === 'invalid_message') {
+        this.emit('invalid_message', frame);
+      }
       return;
     }
 
     if (frame.type === MESSAGE_RECEIVED) {
       this.emit('message_received', frame);
+      return;
+    }
+
+    if (frame.type === VOICE_CHUNK) {
+      this.emit('voice_chunk_text', frame);
       return;
     }
 

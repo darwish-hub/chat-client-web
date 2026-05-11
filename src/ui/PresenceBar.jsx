@@ -24,9 +24,9 @@ export default function PresenceBar({ serviceId }) {
   return (
     <div className="presence-bar">
       {onlineUsers.map((user) => (
-        <div key={user.userId} className="presence-user" title={user.userName}>
-          <span className={`presence-dot ${user.status === 'online' ? 'online' : 'offline'}`} />
-          <span className="presence-name">{user.userName}</span>
+        <div key={user.userId} className="presence-user" title={user.displayName}>
+          <span className={`presence-dot ${user.isOnline ? 'online' : 'offline'}`} />
+          <span className="presence-name">{user.displayName}</span>
         </div>
       ))}
     </div>

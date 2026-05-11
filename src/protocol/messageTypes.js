@@ -1,6 +1,6 @@
 /**
  * Message type constants for the ChatHub WebSocket protocol.
- * Source of truth: specs/002-web-test-client/contracts/websocket-protocol.md
+ * Source of truth: specs/003-web-client-alignment/contracts/websocket-protocol.md
  */
 
 // Client → Server
@@ -8,6 +8,7 @@ export const JOIN_SERVICE = 'join_service';
 export const LEAVE_SERVICE = 'leave_service';
 export const TEXT_MESSAGE = 'text_message';
 export const VOICE_CHUNK = 'voice_chunk';
+export const VOICE_MESSAGE = 'voice_message';
 export const FILE_ATTACHMENT = 'file_attachment';
 export const TYPING = 'typing';
 export const ACK = 'ack';
@@ -26,6 +27,7 @@ export const CLIENT_MESSAGE_TYPES = [
   LEAVE_SERVICE,
   TEXT_MESSAGE,
   VOICE_CHUNK,
+  VOICE_MESSAGE,
   FILE_ATTACHMENT,
   TYPING,
   ACK,
@@ -37,6 +39,7 @@ export const SERVER_MESSAGE_TYPES = [
   USER_JOINED,
   USER_LEFT,
   MESSAGE_RECEIVED,
+  VOICE_CHUNK,
   DELIVERED,
   TYPING,
   ERROR,

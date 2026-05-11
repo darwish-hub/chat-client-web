@@ -4,3 +4,7 @@ export const MAX_TEXT_LENGTH = 2000;
 export const PING_INTERVAL_MS = 15000;
 export const RECONNECT_DELAY_MS = 1000;
 export const MAX_RECONNECT_DELAY_MS = 30000;
+export const MAX_UPLOAD_BYTES = 104_857_600;
+export const MAX_VOICE_CHUNK_BYTES = 65536;
+export const TYPING_DEBOUNCE_MS = 300;
+export const HEARTBEAT_TIMEOUT_MS = 30000;

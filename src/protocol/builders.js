@@ -5,6 +5,7 @@ import {
   LEAVE_SERVICE,
   TEXT_MESSAGE,
   VOICE_CHUNK,
+  VOICE_MESSAGE,
   FILE_ATTACHMENT,
   TYPING,
   ACK,
@@ -109,6 +110,41 @@ export function buildPong() {
   return {
     type: PONG,
   };
+}
+
+/**
+ * Build a file_attachment frame.
+ * @param {string} conversationId
+ * @param {string} blobId
+ * @param {string} fileName
+ * @param {string} mimeType
+ * @param {number} sizeBytes
+ * @param {number} [durationMs]
+ * @param {string} [replyToId]
+ * @returns {{type: string, id: string, conversationId: string, blobId: string, fileName: string, mimeType: string, sizeBytes: number, durationMs?: number, replyToId?: string}}
+ */
+/**
+ * Build a voice_message frame for pre-recorded/assembled voice.
+ * @param {string} conversationId
+ * @param {string} blobId
+ * @param {number} durationMs
+ * @param {string} mimeType
+ * @param {string} [replyToId]
+ * @returns {{type: string, id: string, conversationId: string, blobId: string, durationMs: number, mimeType: string, replyToId?: string}}
+ */
+export function buildVoiceMessage(conversationId, blobId, durationMs, mimeType, replyToId) {
+  const envelope = {
+    type: VOICE_MESSAGE,
+    id: uuidv4(),
+    conversationId,
+    blobId,
+    durationMs,
+    mimeType,
+  };
+  if (replyToId) {
+    envelope.replyToId = replyToId;
+  }
+  return envelope;
 }
 
 /**

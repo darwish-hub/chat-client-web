@@ -8,7 +8,7 @@ import { API_BASE } from '../config';
  */
 export async function download(blobId, fileName) {
   const token = localStorage.getItem('chathub-token');
-  const url = `${API_BASE}/api/download/${blobId}`;
+  const url = `${API_BASE}/api/upload/download/${blobId}`;
 
   // Try in-app download first
   try {

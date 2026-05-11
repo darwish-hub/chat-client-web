@@ -35,7 +35,7 @@ class ConversationStore {
 
   list() {
     return Array.from(this.conversations.values()).sort(
-      (a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt)
+      (a, b) => new Date(b.lastMessageAt || b.createdAt) - new Date(a.lastMessageAt || a.createdAt)
     );
   }
 

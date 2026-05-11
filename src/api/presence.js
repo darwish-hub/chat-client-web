@@ -3,7 +3,7 @@ import { API_BASE } from '../config';
 /**
  * Fetch currently online users in a service.
  * @param {string} serviceId
- * @returns {Promise<Array<{userId: string, userName: string, status: string}>>}
+ * @returns {Promise<Array<{userId: string, displayName: string, lastSeen: string}>>}
  */
 export async function fetchOnlineUsers(serviceId) {
   const token = localStorage.getItem('chathub-token');
@@ -15,5 +15,6 @@ export async function fetchOnlineUsers(serviceId) {
     throw new Error(`Failed to fetch online users: HTTP ${response.status}`);
   }
 
-  return response.json();
+  const data = await response.json();
+  return data.onlineUsers;
 }

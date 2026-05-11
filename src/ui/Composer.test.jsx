@@ -40,20 +40,20 @@ describe('Composer', () => {
   it('shows reply preview when replyTo is provided', () => {
     const replyTo = {
       id: 'msg-1',
-      fromUserName: 'Alice',
-      content: { text: 'Original message' },
+      senderId: 'user-1',
+      text: 'Original message',
     };
     render(<Composer conversationId="conv-1" serviceId="svc-1" replyTo={replyTo} onDismissReply={vi.fn()} />);
     expect(screen.getByText(/Replying to/)).toBeInTheDocument();
-    expect(screen.getByText('Alice')).toBeInTheDocument();
+    expect(screen.getByText('user-1')).toBeInTheDocument();
   });
 
   it('calls onDismissReply when dismiss button clicked', () => {
     const onDismissReply = vi.fn();
     const replyTo = {
       id: 'msg-1',
-      fromUserName: 'Alice',
-      content: { text: 'Original message' },
+      senderId: 'user-1',
+      text: 'Original message',
     };
     render(<Composer conversationId="conv-1" serviceId="svc-1" replyTo={replyTo} onDismissReply={onDismissReply} />);
     fireEvent.click(screen.getByTitle('Dismiss reply'));

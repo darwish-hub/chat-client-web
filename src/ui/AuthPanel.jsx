@@ -65,6 +65,15 @@ export default function AuthPanel({
       {authError && (
         <div className="auth-error">
           <strong>Auth Error:</strong> {authError}
+          {authError.toLowerCase().includes('token') && (
+            <button
+              className="auth-btn auth-btn-connect"
+              style={{ marginLeft: '8px' }}
+              onClick={onConnect}
+            >
+              Retry with new token
+            </button>
+          )}
         </div>
       )}
 

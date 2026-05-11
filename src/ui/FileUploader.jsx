@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback } from 'react';
 import { uploadFile, uploadFromUrl } from '../api/upload';
+import { MAX_UPLOAD_BYTES } from '../config';
 
 export default function FileUploader({ onUpload, conversationId }) {
   const [isDragging, setIsDragging] = useState(false);
@@ -30,6 +31,16 @@ export default function FileUploader({ onUpload, conversationId }) {
   };
 
   const processFile = (file) => {
+    if (file.size > MAX_UPLOAD_BYTES) {
+      const maxSizeMB = (MAX_UPLOAD_BYTES / (1024 * 1024)).toFixed(0);
+      const fileSizeMB = (file.size / (1024 * 1024)).toFixed(1);
+      setUploads((prev) => [
+        ...prev,
+        { id: Math.random().toString(36).slice(2), fileName: file.name, progress: 0, status: 'error', error: `File too large: ${fileSizeMB}MB exceeds ${maxSizeMB}MB limit` },
+      ]);
+      return;
+    }
+
     const id = Math.random().toString(36).slice(2);
     setUploads((prev) => [...prev, { id, fileName: file.name, progress: 0, status: 'uploading' }]);
 

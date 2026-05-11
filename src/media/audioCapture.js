@@ -1,7 +1,10 @@
 /**
  * Audio capture using MediaRecorder API.
  * Produces 200ms chunks for real-time streaming.
+ * Validates chunk size against MAX_VOICE_CHUNK_BYTES.
  */
+
+import { MAX_VOICE_CHUNK_BYTES } from '../config';
 
 let mediaRecorder = null;
 let audioStream = null;
@@ -38,6 +41,10 @@ export async function startRecording(onChunk) {
 
   mediaRecorder.ondataavailable = (event) => {
     if (event.data && event.data.size > 0) {
+      if (event.data.size > MAX_VOICE_CHUNK_BYTES) {
+        console.warn(`[AudioCapture] Chunk size ${event.data.size} bytes exceeds MAX_VOICE_CHUNK_BYTES (${MAX_VOICE_CHUNK_BYTES}), skipping`);
+        return;
+      }
       onChunk(event.data);
     }
   };

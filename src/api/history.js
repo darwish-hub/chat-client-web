@@ -21,6 +21,7 @@ async function handleResponse(response) {
  * @param {string} conversationId
  * @param {string} [before] - ISO datetime
  * @param {number} [limit=50]
+ * @returns {Promise<{conversationId: string, messages: Array, hasMore: boolean}>}
  */
 export async function fetchHistory(conversationId, before, limit = 50) {
   const url = new URL(`${API_BASE}/api/conversation/${conversationId}/messages`);
@@ -40,6 +41,7 @@ export async function fetchHistory(conversationId, before, limit = 50) {
  * Fetch reply thread for a specific message.
  * @param {string} conversationId
  * @param {string} messageId
+ * @returns {Promise<{originalMessage: object, replies: Array}>}
  */
 export async function fetchThread(conversationId, messageId) {
   const response = await fetch(

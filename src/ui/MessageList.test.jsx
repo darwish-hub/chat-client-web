@@ -8,11 +8,11 @@ vi.mock('../api/download', () => ({
 }));
 
 vi.mock('../media/videoPreview', () => ({
-  getVideoUrl: vi.fn(() => 'http://localhost:8080/api/download/test-blob'),
+  getVideoUrl: vi.fn(() => 'http://localhost:8080/api/upload/download/test-blob'),
 }));
 
 vi.mock('../api/history', () => ({
-  fetchThread: vi.fn().mockResolvedValue([]),
+  fetchThread: vi.fn().mockResolvedValue({ originalMessage: null, replies: [] }),
 }));
 
 describe('MessageList', () => {
@@ -34,15 +34,14 @@ describe('MessageList', () => {
     messageStore.add({
       id: 'msg-1',
       conversationId: 'conv-1',
-      fromUserId: 'user-1',
-      fromUserName: 'Alice',
+      senderId: 'user-1',
       type: 'text',
-      content: { text: 'Hello world' },
+      text: 'Hello world',
       createdAt: '2026-05-10T12:00:00Z',
     });
 
     render(<MessageList conversationId="conv-1" />);
-    expect(screen.getByText('Alice')).toBeInTheDocument();
+    expect(screen.getByText('user-1')).toBeInTheDocument();
     expect(screen.getByText('Hello world')).toBeInTheDocument();
   });
 
@@ -50,10 +49,9 @@ describe('MessageList', () => {
     messageStore.add({
       id: 'msg-1',
       conversationId: 'conv-1',
-      fromUserId: 'user-1',
-      fromUserName: 'Alice',
+      senderId: 'user-1',
       type: 'text',
-      content: { text: 'Hello' },
+      text: 'Hello',
       createdAt: '2026-05-10T12:00:00Z',
     });
 
@@ -65,10 +63,9 @@ describe('MessageList', () => {
     messageStore.add({
       id: 'msg-1',
       conversationId: 'conv-1',
-      fromUserId: 'user-1',
-      fromUserName: 'Alice',
+      senderId: 'user-1',
       type: 'text',
-      content: { text: 'Hello' },
+      text: 'Hello',
       createdAt: '2026-05-10T12:00:00Z',
       deliveredAt: '2026-05-10T12:00:01Z',
     });
@@ -81,10 +78,9 @@ describe('MessageList', () => {
     messageStore.add({
       id: 'msg-1',
       conversationId: 'conv-1',
-      fromUserId: 'user-1',
-      fromUserName: 'Alice',
+      senderId: 'user-1',
       type: 'text',
-      content: { text: '<script>alert("xss")</script>' },
+      text: '<script>alert("xss")</script>',
       createdAt: '2026-05-10T12:00:00Z',
     });
 

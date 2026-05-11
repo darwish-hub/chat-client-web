@@ -5,20 +5,20 @@ import { getVideoUrl } from '../media/videoPreview';
 import { fetchThread } from '../api/history';
 
 function FileMessage({ msg }) {
-  const content = msg.content || {};
-  const isVideo = content.mimeType?.startsWith('video/');
-  const isImage = content.mimeType?.startsWith('image/');
-  const fileUrl = content.url || (isVideo ? getVideoUrl(content.blobId) : `${import.meta.env.VITE_API_BASE || ''}/api/download/${content.blobId}`);
+  const attachment = msg.attachment || {};
+  const isVideo = attachment.mimeType?.startsWith('video/');
+  const isImage = attachment.mimeType?.startsWith('image/');
+  const fileUrl = attachment.url || (isVideo ? getVideoUrl(attachment.blobId) : undefined);
 
   return (
     <div className="file-message">
       <div className="file-message-icon">
-        {isVideo ? '🎬' : isImage ? '🖼️' : '📎'}
+        {isVideo ? '\uD83C\uDFAC' : isImage ? '\uD83D\uDDBC\uFE0F' : '\uD83D\uDCC1'}
       </div>
       <div className="file-message-info">
-        <div className="file-message-name">{content.fileName || 'Unknown file'}</div>
+        <div className="file-message-name">{attachment.fileName || 'Unknown file'}</div>
         <div className="file-message-meta">
-          {content.mimeType} · {formatBytes(content.sizeBytes)}
+          {attachment.mimeType} \u00B7 {formatBytes(attachment.sizeBytes)}
         </div>
       </div>
       <div className="file-message-actions">
@@ -33,9 +33,9 @@ function FileMessage({ msg }) {
         )}
         <button
           className="file-message-download"
-          onClick={() => download(content.blobId, content.fileName)}
+          onClick={() => download(attachment.blobId, attachment.fileName)}
         >
-          ⬇️ Download
+          \u2B07\uFE0F Download
         </button>
       </div>
     </div>
@@ -50,13 +50,14 @@ function formatBytes(bytes) {
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
 }
 
-const ITEM_HEIGHT = 80; // estimated average message height
-const OVERSCAN = 5; // extra items to render above/below viewport
+const ITEM_HEIGHT = 80;
+const OVERSCAN = 5;
 
 export default function MessageList({ conversationId, onReply }) {
   const [messages, setMessages] = useState([]);
   const [viewingThread, setViewingThread] = useState(null);
   const [threadMessages, setThreadMessages] = useState([]);
+  const [threadOriginal, setThreadOriginal] = useState(null);
   const [scrollTop, setScrollTop] = useState(0);
   const [containerHeight, setContainerHeight] = useState(0);
   const bottomRef = useRef(null);
@@ -81,7 +82,6 @@ export default function MessageList({ conversationId, onReply }) {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // Virtualization: measure container and track scroll
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -101,7 +101,6 @@ export default function MessageList({ conversationId, onReply }) {
     };
   }, [conversationId, viewingThread]);
 
-  // Calculate visible range
   const startIndex = Math.max(0, Math.floor(scrollTop / ITEM_HEIGHT) - OVERSCAN);
   const endIndex = Math.min(
     messages.length - 1,
@@ -130,10 +129,11 @@ export default function MessageList({ conversationId, onReply }) {
   };
 
   const handleViewThread = async (msg) => {
-    if (!msg?.id) return;
+    if (!msg?.id || !conversationId) return;
     try {
-      const replies = await fetchThread(conversationId, msg.id);
-      setThreadMessages(replies);
+      const result = await fetchThread(conversationId, msg.id);
+      setThreadOriginal(result.originalMessage);
+      setThreadMessages(result.replies || []);
       setViewingThread(msg);
     } catch (err) {
       console.error('Failed to load thread:', err);
@@ -143,19 +143,19 @@ export default function MessageList({ conversationId, onReply }) {
   const closeThread = () => {
     setViewingThread(null);
     setThreadMessages([]);
+    setThreadOriginal(null);
   };
 
   const renderMessageContent = (msg) => {
-    if (msg.type === 'text' && msg.content?.text) {
-      // React JSX automatically escapes content, preventing XSS
-      return <span style={{ whiteSpace: 'pre-wrap' }}>{msg.content.text}</span>;
+    if (msg.type === 'text' && msg.text) {
+      return <span style={{ whiteSpace: 'pre-wrap' }}>{msg.text}</span>;
     }
     if (msg.type === 'voice') {
       return (
         <div className="voice-message">
-          <span>🎤 Voice message</span>
-          {msg.content?.url && (
-            <audio controls src={msg.content.url} preload="metadata" />
+          <span>\uD83C\uDF99\uFE0F Voice message</span>
+          {msg.attachment?.url && (
+            <audio controls src={msg.attachment.url} preload="metadata" />
           )}
         </div>
       );
@@ -170,12 +170,15 @@ export default function MessageList({ conversationId, onReply }) {
     const isReply = !!msg.replyToId;
     const originalMessage = isReply ? messageStore.findById(msg.replyToId) : null;
     const hasReplies = messages.some((m) => m.replyToId === msg.id);
+    const currentUserId = localStorage.getItem('chathub-token')
+      ? JSON.parse(atob(localStorage.getItem('chathub-token').split('.')[1])).sub
+      : null;
 
     return (
       <div
         key={msg.id}
         ref={(el) => { if (el) messageRefs.current.set(msg.id, el); }}
-        className={`message-item ${msg.fromUserId === 'me' ? 'message-mine' : ''} ${isReply ? 'message-reply' : ''}`}
+        className={`message-item ${msg.senderId === currentUserId ? 'message-mine' : ''} ${isReply ? 'message-reply' : ''}`}
       >
         {isReply && originalMessage && (
           <div
@@ -186,19 +189,19 @@ export default function MessageList({ conversationId, onReply }) {
             <div className="message-reply-line" />
             <div className="message-reply-preview">
               <span className="message-reply-sender">
-                {originalMessage.fromUserName || originalMessage.fromUserId}
+                {originalMessage.senderId || 'Unknown'}
               </span>
               <span className="message-reply-text">
-                {originalMessage.content?.text?.slice(0, 60) || '[attachment]'}
+                {originalMessage.text?.slice(0, 60) || '[attachment]'}
               </span>
             </div>
           </div>
         )}
 
         <div className="message-header">
-          <span className="message-sender">{msg.fromUserName || msg.fromUserId || 'Unknown'}</span>
+          <span className="message-sender">{msg.senderId || 'Unknown'}</span>
           <span className="message-time">{formatTime(msg.createdAt)}</span>
-          {msg.deliveredAt && <span className="message-delivered" title="Delivered">✓</span>}
+          {msg.deliveredAt && <span className="message-delivered" title="Delivered">\u2713</span>}
         </div>
 
         <div className="message-content">
@@ -211,7 +214,7 @@ export default function MessageList({ conversationId, onReply }) {
             onClick={() => handleReply(msg)}
             title="Reply"
           >
-            ↩️ Reply
+            \u21A9\uFE0F Reply
           </button>
           {hasReplies && !isThreadView && (
             <button
@@ -219,7 +222,7 @@ export default function MessageList({ conversationId, onReply }) {
               onClick={() => handleViewThread(msg)}
               title="View thread"
             >
-              🧵 View Thread ({messages.filter((m) => m.replyToId === msg.id).length})
+              \uD83E\uDDF5 View Thread ({messages.filter((m) => m.replyToId === msg.id).length})
             </button>
           )}
         </div>
@@ -240,10 +243,10 @@ export default function MessageList({ conversationId, onReply }) {
       {viewingThread ? (
         <div className="thread-view">
           <div className="thread-header">
-            <button className="thread-back-btn" onClick={closeThread}>← Back</button>
+            <button className="thread-back-btn" onClick={closeThread}>\u2190 Back</button>
             <span className="thread-title">Thread</span>
           </div>
-          {renderMessage(viewingThread, true)}
+          {threadOriginal && renderMessage(threadOriginal, true)}
           <div className="thread-replies">
             {threadMessages.length === 0 ? (
               <p className="thread-empty">No replies yet</p>

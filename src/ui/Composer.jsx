@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
+import { TYPING_DEBOUNCE_MS } from '../config';
 import { MAX_TEXT_LENGTH } from '../config';
 import { buildTextMessage, buildFileAttachment, buildTyping } from '../protocol/builders';
 import { wsClient } from '../transport/wsClient';
 import FileUploader from './FileUploader';
 
-const TYPING_DEBOUNCE_MS = 3000;
+
 
 export default function Composer({ conversationId, serviceId, onSend, replyTo, onDismissReply, disabled, error }) {
   const [text, setText] = useState('');
@@ -93,10 +94,10 @@ export default function Composer({ conversationId, serviceId, onSend, replyTo, o
           <div className="composer-reply-content">
             <span className="composer-reply-label">Replying to</span>
             <span className="composer-reply-sender">
-              {replyTo.fromUserName || replyTo.fromUserId}
+              {replyTo.senderId || 'Unknown'}
             </span>
             <span className="composer-reply-text">
-              {replyTo.content?.text?.slice(0, 80) || '[attachment]'}
+              {replyTo.text?.slice(0, 80) || '[attachment]'}
             </span>
           </div>
           <button
