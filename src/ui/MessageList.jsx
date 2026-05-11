@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { messageStore } from '../state/messageStore';
 import { download } from '../api/download';
 import { getVideoUrl } from '../media/videoPreview';
@@ -50,19 +50,24 @@ function formatBytes(bytes) {
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
 }
 
-const ITEM_HEIGHT = 80;
-const OVERSCAN = 5;
-
 export default function MessageList({ conversationId, onReply }) {
   const [messages, setMessages] = useState([]);
   const [viewingThread, setViewingThread] = useState(null);
   const [threadMessages, setThreadMessages] = useState([]);
   const [threadOriginal, setThreadOriginal] = useState(null);
-  const [scrollTop, setScrollTop] = useState(0);
-  const [containerHeight, setContainerHeight] = useState(0);
   const bottomRef = useRef(null);
   const messageRefs = useRef(new Map());
-  const containerRef = useRef(null);
+
+  const currentUserId = useMemo(() => {
+    try {
+      const token = localStorage.getItem('chathub-token');
+      if (token) {
+        const b64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+        return JSON.parse(atob(b64)).sub;
+      }
+    } catch {}
+    return null;
+  }, []);
 
   useEffect(() => {
     const updateMessages = () => {
@@ -81,34 +86,6 @@ export default function MessageList({ conversationId, onReply }) {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
-
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-
-    const updateMetrics = () => {
-      setContainerHeight(el.clientHeight);
-      setScrollTop(el.scrollTop);
-    };
-
-    updateMetrics();
-    el.addEventListener('scroll', updateMetrics);
-    window.addEventListener('resize', updateMetrics);
-
-    return () => {
-      el.removeEventListener('scroll', updateMetrics);
-      window.removeEventListener('resize', updateMetrics);
-    };
-  }, [conversationId, viewingThread]);
-
-  const startIndex = Math.max(0, Math.floor(scrollTop / ITEM_HEIGHT) - OVERSCAN);
-  const endIndex = Math.min(
-    messages.length - 1,
-    Math.ceil((scrollTop + containerHeight) / ITEM_HEIGHT) + OVERSCAN
-  );
-  const visibleMessages = viewingThread ? messages : messages.slice(startIndex, endIndex + 1);
-  const topPadding = startIndex * ITEM_HEIGHT;
-  const bottomPadding = Math.max(0, (messages.length - endIndex - 1) * ITEM_HEIGHT);
 
   const formatTime = (iso) => {
     const d = new Date(iso);
@@ -170,15 +147,15 @@ export default function MessageList({ conversationId, onReply }) {
     const isReply = !!msg.replyToId;
     const originalMessage = isReply ? messageStore.findById(msg.replyToId) : null;
     const hasReplies = messages.some((m) => m.replyToId === msg.id);
-    const currentUserId = localStorage.getItem('chathub-token')
-      ? JSON.parse(atob(localStorage.getItem('chathub-token').split('.')[1])).sub
-      : null;
+    const isMine = msg.senderId === currentUserId;
+
+    const dateGroup = formatTime(msg.createdAt);
 
     return (
       <div
         key={msg.id}
         ref={(el) => { if (el) messageRefs.current.set(msg.id, el); }}
-        className={`message-item ${msg.senderId === currentUserId ? 'message-mine' : ''} ${isReply ? 'message-reply' : ''}`}
+        className={`message-item ${isMine ? 'message-mine' : 'message-other'} ${isReply ? 'message-reply' : ''}`}
       >
         {isReply && originalMessage && (
           <div
@@ -186,7 +163,6 @@ export default function MessageList({ conversationId, onReply }) {
             onClick={() => !isThreadView && handleScrollToOriginal(msg.replyToId)}
             style={{ cursor: isThreadView ? 'default' : 'pointer' }}
           >
-            <div className="message-reply-line" />
             <div className="message-reply-preview">
               <span className="message-reply-sender">
                 {originalMessage.senderId || 'Unknown'}
@@ -198,14 +174,20 @@ export default function MessageList({ conversationId, onReply }) {
           </div>
         )}
 
-        <div className="message-header">
-          <span className="message-sender">{msg.senderId || 'Unknown'}</span>
-          <span className="message-time">{formatTime(msg.createdAt)}</span>
-          {msg.deliveredAt && <span className="message-delivered" title="Delivered">\u2713</span>}
-        </div>
+        {!isMine && (
+          <div className="message-sender-row">
+            <span className="message-sender">{msg.senderId || 'Unknown'}</span>
+          </div>
+        )}
 
-        <div className="message-content">
-          {renderMessageContent(msg)}
+        <div className="message-body">
+          <div className="message-content">
+            {renderMessageContent(msg)}
+          </div>
+          <div className="message-meta">
+            <span className="message-time">{dateGroup}</span>
+            {msg.deliveredAt && <span className="message-delivered" title="Delivered">\u2713</span>}
+          </div>
         </div>
 
         <div className="message-actions">
@@ -214,7 +196,7 @@ export default function MessageList({ conversationId, onReply }) {
             onClick={() => handleReply(msg)}
             title="Reply"
           >
-            \u21A9\uFE0F Reply
+            Reply
           </button>
           {hasReplies && !isThreadView && (
             <button
@@ -222,7 +204,7 @@ export default function MessageList({ conversationId, onReply }) {
               onClick={() => handleViewThread(msg)}
               title="View thread"
             >
-              \uD83E\uDDF5 View Thread ({messages.filter((m) => m.replyToId === msg.id).length})
+              Thread ({messages.filter((m) => m.replyToId === msg.id).length})
             </button>
           )}
         </div>
@@ -231,11 +213,15 @@ export default function MessageList({ conversationId, onReply }) {
   };
 
   if (!conversationId) {
-    return <p>Select a conversation to view messages</p>;
+    return (
+      <div className="message-list message-list-empty">
+        <p className="message-empty">Select a conversation to view messages</p>
+      </div>
+    );
   }
 
   return (
-    <div className="message-list" ref={containerRef}>
+    <div className="message-list">
       {messages.length === 0 && !viewingThread && (
         <p className="message-empty">No messages yet</p>
       )}
@@ -256,11 +242,7 @@ export default function MessageList({ conversationId, onReply }) {
           </div>
         </div>
       ) : (
-        <>
-          {topPadding > 0 && <div style={{ height: topPadding }} />}
-          {visibleMessages.map((msg) => renderMessage(msg))}
-          {bottomPadding > 0 && <div style={{ height: bottomPadding }} />}
-        </>
+        messages.map((msg) => renderMessage(msg))
       )}
 
       <div ref={bottomRef} />

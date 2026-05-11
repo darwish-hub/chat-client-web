@@ -442,7 +442,10 @@ function App() {
   return (
     <div className="app-container">
       <header className="app-header">
-        <h1>ChatHub Web Test Client</h1>
+        <div className="app-header-left">
+          <h1>ChatHub</h1>
+          <span className="app-header-subtitle">Test Client</span>
+        </div>
         <div className={`status-indicator ${connectionStatus}`}>
           {connectionStatus}
         </div>
@@ -459,146 +462,144 @@ function App() {
       )}
 
       <main className="app-main">
-        <section className="panel auth-panel">
-          <h2>Auth</h2>
-          <AuthPanel
-            token={token}
-            connectionStatus={connectionStatus}
-            authError={authError}
-            onTokenChange={handleTokenChange}
-            onConnect={handleConnect}
-            onDisconnect={handleDisconnect}
-          />
-          {connectionStatus === 'connected' && (
-            <button
-              className="simulate-disconnect-btn"
-              onClick={handleSimulateDisconnect}
-              title="Close socket without sending leave_service"
-            >
-              Simulate Disconnect
-            </button>
-          )}
-        </section>
-
-        <section className="panel conversations-panel">
-          <ConversationList
-            onSelect={handleSelectConversation}
-            onCreate={handleCreateConversation}
-          />
-        </section>
-
-        <section className="panel messages-panel">
-          <MessageList
-            conversationId={currentConversationId}
-            onReply={handleReply}
-          />
-        </section>
-
-        <section className="panel composer-panel">
-          <TypingIndicator conversationId={currentConversationId} />
-          <Composer
-            conversationId={currentConversationId}
-            serviceId={currentServiceId}
-            onSend={handleSendMessage}
-            replyTo={replyTo}
-            onDismissReply={handleDismissReply}
-            disabled={composerDisabled}
-            error={composerError}
-          />
-          <VoiceRecorder
-            conversationId={currentConversationId}
-            onSend={(envelope) => addLog(`→ voice_chunk: seq=${envelope.sequenceNumber} final=${envelope.isFinal}`)}
-            simulatePacketLoss={simulatePacketLoss}
-          />
-          <label className="packet-loss-toggle">
-            <input
-              type="checkbox"
-              checked={simulatePacketLoss}
-              onChange={(e) => setSimulatePacketLoss(e.target.checked)}
+        <aside className="sidebar-left">
+          <div className="sidebar-section sidebar-auth">
+            <AuthPanel
+              token={token}
+              connectionStatus={connectionStatus}
+              authError={authError}
+              onTokenChange={handleTokenChange}
+              onConnect={handleConnect}
+              onDisconnect={handleDisconnect}
             />
-            Simulate packet loss (5%)
-          </label>
-
-          <div className="test-controls">
-            <div className="test-control-row">
-              <label>Network:</label>
-              <select
-                value={networkThrottle}
-                onChange={(e) => setNetworkThrottle(e.target.value)}
-                className="test-select"
+            {connectionStatus === 'connected' && (
+              <button
+                className="simulate-disconnect-btn"
+                onClick={handleSimulateDisconnect}
+                title="Close socket without sending leave_service"
               >
-                <option value="none">No throttle</option>
-                <option value="fast4g">Fast 4G</option>
-                <option value="slow3g">Slow 3G</option>
-                <option value="offline">Offline</option>
-              </select>
-            </div>
-            <button
-              className="test-btn"
-              onClick={handleSendBurst}
-              disabled={!currentConversationId}
-              title="Send 20 messages rapidly"
-            >
-              Send Burst (20)
-            </button>
-            <div className="test-control-row multi-device">
+                Simulate Disconnect
+              </button>
+            )}
+          </div>
+          <div className="sidebar-section sidebar-conversations">
+            <ConversationList
+              onSelect={handleSelectConversation}
+              onCreate={handleCreateConversation}
+            />
+          </div>
+        </aside>
+
+        <section className="chat-area">
+          <div className="chat-messages">
+            <MessageList
+              conversationId={currentConversationId}
+              onReply={handleReply}
+            />
+          </div>
+          <div className="chat-composer">
+            <TypingIndicator conversationId={currentConversationId} />
+            <Composer
+              conversationId={currentConversationId}
+              serviceId={currentServiceId}
+              onSend={handleSendMessage}
+              replyTo={replyTo}
+              onDismissReply={handleDismissReply}
+              disabled={composerDisabled}
+              error={composerError}
+            />
+            <VoiceRecorder
+              conversationId={currentConversationId}
+              onSend={(envelope) => addLog(`→ voice_chunk: seq=${envelope.sequenceNumber} final=${envelope.isFinal}`)}
+              simulatePacketLoss={simulatePacketLoss}
+            />
+            <label className="packet-loss-toggle">
               <input
-                type="text"
-                placeholder="Alt JWT for multi-device"
-                value={multiDeviceToken}
-                onChange={(e) => setMultiDeviceToken(e.target.value)}
-                className="test-input"
+                type="checkbox"
+                checked={simulatePacketLoss}
+                onChange={(e) => setSimulatePacketLoss(e.target.checked)}
               />
+              Simulate packet loss (5%)
+            </label>
+            <div className="test-controls">
+              <div className="test-control-row">
+                <label>Network:</label>
+                <select
+                  value={networkThrottle}
+                  onChange={(e) => setNetworkThrottle(e.target.value)}
+                  className="test-select"
+                >
+                  <option value="none">No throttle</option>
+                  <option value="fast4g">Fast 4G</option>
+                  <option value="slow3g">Slow 3G</option>
+                  <option value="offline">Offline</option>
+                </select>
+              </div>
               <button
                 className="test-btn"
-                onClick={handleMultiDeviceOpen}
-                disabled={!multiDeviceToken.trim()}
-                title="Open second tab with different token"
+                onClick={handleSendBurst}
+                disabled={!currentConversationId}
+                title="Send 20 messages rapidly"
               >
-                Open Tab
+                Send Burst (20)
               </button>
+              <div className="test-control-row multi-device">
+                <input
+                  type="text"
+                  placeholder="Alt JWT"
+                  value={multiDeviceToken}
+                  onChange={(e) => setMultiDeviceToken(e.target.value)}
+                  className="test-input"
+                />
+                <button
+                  className="test-btn"
+                  onClick={handleMultiDeviceOpen}
+                  disabled={!multiDeviceToken.trim()}
+                  title="Open second tab with different token"
+                >
+                  Open Tab
+                </button>
+              </div>
             </div>
           </div>
         </section>
 
-        <section className="panel presence-panel">
-          <h2>Presence</h2>
-          <PresenceBar serviceId={currentServiceId} />
-        </section>
-
-        <section className="panel metrics-panel">
-          <h2>Metrics</h2>
-          <MetricsDashboard
-            connectionStatus={connectionStatus}
-            connectTime={connectTime}
-            messagesSent={messagesSent}
-            messagesReceived={messagesReceived}
-            deliveredLatencies={deliveredLatencies}
-            voiceChunkLatencies={voiceChunkLatencies}
-            queueDepth={queueDepth}
-          />
-        </section>
-
-        <section className="panel test-scenarios-panel">
-          <TestScenarios
-            token={token}
-            conversationId={currentConversationId}
-            onLog={addLog}
-            onSetCurrentConversation={(id) => {
-              setCurrentConversationId(id);
-              conversationStore.setCurrent(id);
-            }}
-          />
-        </section>
-
-        <section className="panel logs-panel">
-          <h2>Protocol Log</h2>
-          <ProtocolLog
-            logs={logs}
-            onExport={handleExportLogs}
-            onClear={handleClearLogs}
-          />
-        </section>
+        <aside className="sidebar-right">
+          <div className="sidebar-section">
+            <h2 className="sidebar-heading">Presence</h2>
+            <PresenceBar serviceId={currentServiceId} />
+          </div>
+          <div className="sidebar-section">
+            <h2 className="sidebar-heading">Metrics</h2>
+            <MetricsDashboard
+              connectionStatus={connectionStatus}
+              connectTime={connectTime}
+              messagesSent={messagesSent}
+              messagesReceived={messagesReceived}
+              deliveredLatencies={deliveredLatencies}
+              voiceChunkLatencies={voiceChunkLatencies}
+              queueDepth={queueDepth}
+            />
+          </div>
+          <div className="sidebar-section">
+            <TestScenarios
+              token={token}
+              conversationId={currentConversationId}
+              onLog={addLog}
+              onSetCurrentConversation={(id) => {
+                setCurrentConversationId(id);
+                conversationStore.setCurrent(id);
+              }}
+            />
+          </div>
+          <div className="sidebar-section sidebar-logs">
+            <ProtocolLog
+              logs={logs}
+              onExport={handleExportLogs}
+              onClear={handleClearLogs}
+            />
+          </div>
+        </aside>
       </main>
     </div>
   );
