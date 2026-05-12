@@ -98,12 +98,11 @@ export function validateServerFrame(frame) {
       return typeof frame.userId === 'string' && typeof frame.serviceId === 'string';
     case MESSAGE_RECEIVED:
       return (
-        frame.envelope &&
-        typeof frame.envelope.id === 'string' &&
-        typeof frame.envelope.conversationId === 'string' &&
-        typeof frame.envelope.senderId === 'string' &&
-        typeof frame.envelope.type === 'string' &&
-        typeof frame.envelope.createdAt === 'string'
+        typeof frame.id === 'string' &&
+        typeof frame.conversationId === 'string' &&
+        typeof frame.senderId === 'string' &&
+        typeof frame.messageType === 'string' &&
+        typeof frame.createdAt === 'string'
       );
     case VOICE_CHUNK:
       return (

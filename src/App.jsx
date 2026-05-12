@@ -15,7 +15,7 @@ import TestScenarios from './ui/TestScenarios';
 import { conversationStore } from './state/conversationStore';
 import { messageStore } from './state/messageStore';
 import { presenceStore } from './state/presenceStore';
-import { createConversation, listMyConversations } from './api/conversations';
+import { createConversation, listMyConversations, addParticipants, joinConversation, listAvailableConversations } from './api/conversations';
 import { fetchHistory } from './api/history';
 import { fetchOnlineUsers } from './api/presence';
 import { voiceSessionStore } from './state/voiceSessionStore';
@@ -34,6 +34,8 @@ function App() {
   const [toasts, setToasts] = useState([]);
   const [networkThrottle, setNetworkThrottle] = useState('none');
   const [multiDeviceToken, setMultiDeviceToken] = useState('');
+  const [availableConversations, setAvailableConversations] = useState([]);
+  const [showAvailable, setShowAvailable] = useState(false);
 
   // Metrics state
   const [connectTime, setConnectTime] = useState(null);
@@ -237,8 +239,8 @@ function App() {
       setCurrentServiceId(serviceId);
       wsClient.send(buildJoinService(serviceId));
       addLog('→ join_service');
-      // Load conversations after connect; online users fetched on user_joined
       loadConversations();
+      loadAvailableConversations(serviceId);
     } catch (err) {
       setConnectionStatus('disconnected');
       setAuthError(err.message);
@@ -370,6 +372,17 @@ function App() {
     }
   };
 
+  const loadAvailableConversations = async (serviceId) => {
+    try {
+      const conversations = await listAvailableConversations(serviceId);
+      setAvailableConversations(conversations);
+      setShowAvailable(true);
+      addLog(`Found ${conversations.length} available conversations`);
+    } catch (err) {
+      addLog(`Failed to load available conversations: ${err.message}`);
+    }
+  };
+
   const handleSelectConversation = async (id) => {
     conversationStore.setCurrent(id);
     setCurrentConversationId(id);
@@ -388,16 +401,64 @@ function App() {
   const handleCreateConversation = async () => {
     const title = prompt('Conversation title:');
     if (!title) return;
+    const participants = prompt('Enter participant IDs (comma separated):');
+    const participantIds = participants
+      ? participants.split(',').map(p => p.trim()).filter(p => p)
+      : [];
     try {
       const tokenPayload = parseJwt(token);
       const myUserId = tokenPayload?.sub || 'me';
-      const conversation = await createConversation('default-service', title, [myUserId]);
+      const conversation = await createConversation('default-service', title, [...participantIds, myUserId]);
       conversationStore.addOrUpdate(conversation);
       conversationStore.setCurrent(conversation.id);
       setCurrentConversationId(conversation.id);
-      addLog(`Created conversation: ${conversation.title} (${conversation.id})`);
+      addLog(`Created conversation: ${conversation.title} (${conversation.id}) with participants: ${[...participantIds, myUserId].join(', ')}`);
     } catch (err) {
       addLog(`Failed to create conversation: ${err.message}`);
+    }
+  };
+
+  const handleAddParticipants = async () => {
+    if (!currentConversationId) {
+      showToast('info', 'Select a conversation first');
+      return;
+    }
+    const participants = prompt('Enter participant IDs to add (comma separated):');
+    if (!participants) return;
+    const userIds = participants.split(',').map(p => p.trim()).filter(p => p);
+    try {
+      await addParticipants(currentConversationId, userIds);
+      addLog(`Added participants: ${userIds.join(', ')} to conversation ${currentConversationId}`);
+      showToast('success', 'Participants added');
+    } catch (err) {
+      addLog(`Failed to add participants: ${err.message}`);
+      showToast('error', 'Failed to add participants');
+    }
+  };
+
+  const handleShowAvailable = async () => {
+    try {
+      const conversations = await listAvailableConversations('default-service');
+      setAvailableConversations(conversations);
+      setShowAvailable(true);
+      addLog(`Found ${conversations.length} available conversations`);
+    } catch (err) {
+      addLog(`Failed to load available conversations: ${err.message}`);
+    }
+  };
+
+  const handleJoinConversation = async (conversationId) => {
+    try {
+      const conversation = await joinConversation(conversationId);
+      conversationStore.addOrUpdate(conversation);
+      conversationStore.setCurrent(conversation.id);
+      setCurrentConversationId(conversation.id);
+      setShowAvailable(false);
+      addLog(`Joined conversation: ${conversation.title} (${conversation.id})`);
+      loadConversations();
+    } catch (err) {
+      addLog(`Failed to join conversation: ${err.message}`);
+      showToast('error', 'Failed to join conversation');
     }
   };
 
@@ -487,7 +548,54 @@ function App() {
               onSelect={handleSelectConversation}
               onCreate={handleCreateConversation}
             />
+            {currentConversationId && connectionStatus === 'connected' && (
+              <button
+                className="add-participants-btn"
+                onClick={handleAddParticipants}
+                title="Add participants to current conversation"
+              >
+                + Add Participants
+              </button>
+            )}
+            {connectionStatus === 'connected' && (
+              <button
+                className="join-conversation-btn"
+                onClick={handleShowAvailable}
+                title="Browse available conversations to join"
+              >
+                Browse Conversations
+              </button>
+            )}
           </div>
+          {showAvailable && (
+            <div className="sidebar-section sidebar-available">
+              <h3 className="sidebar-heading">Available Conversations</h3>
+              <button
+                className="close-btn"
+                onClick={() => setShowAvailable(false)}
+              >
+                ×
+              </button>
+              {availableConversations.length === 0 ? (
+                <p className="no-conversations">No available conversations</p>
+              ) : (
+                <ul className="available-list">
+                  {availableConversations.map((c) => (
+                    <li key={c.id} className="available-item">
+                      <span className="conv-title">{c.title || 'Untitled'}</span>
+                      <span className="conv-participants">{c.participantIds?.length || 0} members</span>
+                      <button
+                        className="join-btn"
+                        onClick={() => handleJoinConversation(c.id)}
+                      >
+                        Join
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
         </aside>
 
         <section className="chat-area">

@@ -45,3 +45,31 @@ export async function listMyConversations(serviceId) {
   });
   return handleResponse(response);
 }
+
+export async function addParticipants(conversationId, userIds) {
+  const response = await fetch(`${API_BASE}/api/conversation/${conversationId}/participants`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify({ userIds }),
+  });
+  return handleResponse(response);
+}
+
+export async function joinConversation(conversationId) {
+  const response = await fetch(`${API_BASE}/api/conversation/${conversationId}/join`, {
+    method: 'POST',
+    headers: getHeaders(),
+  });
+  return handleResponse(response);
+}
+
+export async function listAvailableConversations(serviceId) {
+  const url = new URL(`${API_BASE}/api/conversation/available`);
+  if (serviceId) {
+    url.searchParams.set('serviceId', serviceId);
+  }
+  const response = await fetch(url, {
+    headers: getHeaders(),
+  });
+  return handleResponse(response);
+}
