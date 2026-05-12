@@ -63,7 +63,8 @@ export default function MessageList({ conversationId, onReply }) {
       const token = localStorage.getItem('chathub-token');
       if (token) {
         const b64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
-        return JSON.parse(atob(b64)).sub;
+        const payload = JSON.parse(atob(b64));
+        return payload.nid || payload.sub;
       }
     } catch {}
     return null;
