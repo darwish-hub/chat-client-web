@@ -15,12 +15,6 @@ export default function ConversationList({ onSelect, onCreate }) {
 
   return (
     <div className="conversation-list">
-      <div className="conversation-list-header">
-        <h3>Conversations</h3>
-        <button onClick={onCreate} className="btn-new-convo" title="New Conversation">
-          +
-        </button>
-      </div>
       <ul className="conversation-items">
         {conversations.length === 0 && (
           <li className="conversation-empty">No conversations yet</li>

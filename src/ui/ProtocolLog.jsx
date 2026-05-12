@@ -36,7 +36,7 @@ function LogEntry({ log, index }) {
   );
 }
 
-export default function ProtocolLog({ logs, onExport, onClear }) {
+export default function ProtocolLog({ logs, onExport, onClear, compact = false }) {
   const [filter, setFilter] = useState('');
 
   const filtered = filter.trim()
@@ -44,24 +44,26 @@ export default function ProtocolLog({ logs, onExport, onClear }) {
     : logs;
 
   return (
-    <div className="protocol-log">
-      <div className="protocol-log-header">
-        <input
-          type="text"
-          placeholder="Filter logs..."
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-          className="log-filter"
-        />
-        <div className="log-actions">
-          <button onClick={onExport} className="log-export-btn" title="Export as .ndjson">
-            ⬇️ Export
-          </button>
-          <button onClick={onClear} className="log-clear-btn" title="Clear logs">
-            🗑️ Clear
-          </button>
+    <div className={`protocol-log ${compact ? 'protocol-log-compact' : ''}`}>
+      {!compact && (
+        <div className="protocol-log-header">
+          <input
+            type="text"
+            placeholder="Filter logs..."
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            className="log-filter"
+          />
+          <div className="log-actions">
+            <button onClick={onExport} className="log-export-btn" title="Export as .ndjson">
+              ⬇️ Export
+            </button>
+            <button onClick={onClear} className="log-clear-btn" title="Clear logs">
+              🗑️ Clear
+            </button>
+          </div>
         </div>
-      </div>
+      )}
       <div className="logs-content">
         {filtered.length === 0 ? (
           <p className="log-empty">No logs yet</p>
